@@ -1,0 +1,235 @@
+
+  /* ──────────────────────────────────────────────────────────
+     明るいテーマを基準に定義し、暗いテーマはトークンだけ差し替える。
+     色は必ずトークン経由。media / [data-theme] の中だけで定義された色は
+     「システム設定のまま」の閲覧者に届かない。
+     系列色は dataviz の検査器で両テーマとも全項目 PASS を確認済み。
+     ────────────────────────────────────────────────────────── */
+  :root {
+    --ground:     #eef2f7;
+    --surface:    #ffffff;
+    --surface-2:  #f6f9fc;
+    --rule:       #dbe3ec;
+    --rule-soft:  #e9eff5;
+    --ink:        #131c28;
+    --ink-soft:   #4a5a6e;
+    --ink-mute:   #7d8c9e;
+    --s1:         #4f46e5;   /* 藍  — 主系列 */
+    --s2:         #0891b2;   /* 青緑 — 副系列 */
+    --s3:         #b45309;   /* 琥珀 — 注意 */
+    --s1-fill:    rgba(79, 70, 229, .13);
+    --s2-fill:    rgba(8, 145, 178, .13);
+    --good:       #047857;
+    --warn:       #b45309;
+    --bad:        #b91c1c;
+    --marker:     rgba(19, 28, 40, .28);
+    --shadow:     0 1px 1px rgba(19,28,40,.04), 0 6px 18px rgba(19,28,40,.06);
+    --mono: "IBM Plex Mono", ui-monospace, "SF Mono", Menlo, monospace;
+    --sans: "Zen Kaku Gothic New", -apple-system, BlinkMacSystemFont,
+            "Hiragino Sans", "Noto Sans JP", sans-serif;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --ground:    #070a11;
+      --surface:   #0e141e;
+      --surface-2: #121a26;
+      --rule:      #223040;
+      --rule-soft: #1a2431;
+      --ink:       #e7eef6;
+      --ink-soft:  #9db0c4;
+      --ink-mute:  #66798d;
+      --s1:        #6b6ef2;
+      --s2:        #0d94a6;
+      --s3:        #c2830e;
+      --s1-fill:   rgba(107, 110, 242, .18);
+      --s2-fill:   rgba(13, 148, 166, .18);
+      --good:      #10a271;
+      --warn:      #c2830e;
+      --bad:       #dc4c4c;
+      --marker:    rgba(231, 238, 246, .30);
+      --shadow:    0 1px 1px rgba(0,0,0,.5), 0 8px 24px rgba(0,0,0,.4);
+    }
+  }
+  :root[data-theme="dark"] {
+    --ground:    #070a11;  --surface:   #0e141e;  --surface-2: #121a26;
+    --rule:      #223040;  --rule-soft: #1a2431;
+    --ink:       #e7eef6;  --ink-soft:  #9db0c4;  --ink-mute:  #66798d;
+    --s1:        #6b6ef2;  --s2:        #0d94a6;  --s3:        #c2830e;
+    --s1-fill:   rgba(107, 110, 242, .18);
+    --s2-fill:   rgba(13, 148, 166, .18);
+    --good:      #10a271;  --warn:      #c2830e;  --bad:       #dc4c4c;
+    --marker:    rgba(231, 238, 246, .30);
+    --shadow:    0 1px 1px rgba(0,0,0,.5), 0 8px 24px rgba(0,0,0,.4);
+  }
+
+  * { box-sizing: border-box; }
+  body {
+    margin: 0; background: var(--ground); color: var(--ink);
+    font-family: var(--sans); line-height: 1.7;
+    -webkit-font-smoothing: antialiased;
+    font-feature-settings: "palt";
+  }
+  .wrap { max-width: 1080px; margin: 0 auto; padding: 44px 20px 80px;
+          display: flex; flex-direction: column; gap: 40px; }
+
+  /* ─── 見出し ─── */
+  header { display: flex; flex-direction: column; gap: 8px; }
+  .eyebrow {
+    font-family: var(--mono); font-size: .7rem; font-weight: 500;
+    letter-spacing: .16em; text-transform: uppercase; color: var(--ink-mute);
+  }
+  h1 { margin: 0; font-size: clamp(1.5rem, 3.4vw, 2rem); font-weight: 700;
+       letter-spacing: -.01em; text-wrap: balance; }
+  .lede { margin: 0; max-width: 62ch; color: var(--ink-soft); font-size: .93rem; }
+
+  /* ─── 状態帯（出発案内板を意識した並び）─── */
+  .strip {
+    display: grid; grid-template-columns: repeat(auto-fit, minmax(128px, 1fr));
+    gap: 1px; background: var(--rule); border: 1px solid var(--rule);
+    border-radius: 3px; overflow: hidden;
+  }
+  .cell { background: var(--surface); padding: 12px 14px 13px; }
+  .cell dt { margin: 0 0 3px; font-family: var(--mono); font-size: .64rem;
+             font-weight: 500; letter-spacing: .1em; text-transform: uppercase;
+             color: var(--ink-mute); }
+  .cell dd { margin: 0; font-family: var(--mono); font-size: 1.35rem;
+             font-weight: 600; font-variant-numeric: tabular-nums;
+             letter-spacing: -.02em; }
+  .cell dd .u { font-size: .72rem; font-weight: 500; color: var(--ink-mute);
+                margin-left: 3px; }
+  .cell .sub { font-family: var(--sans); font-size: .72rem; color: var(--ink-mute);
+               display: block; margin-top: 1px; }
+
+  /* ─── 節 ─── */
+  section { display: flex; flex-direction: column; gap: 14px; }
+  .sec-head { display: flex; flex-direction: column; gap: 4px;
+              border-top: 2px solid var(--ink); padding-top: 12px; }
+  .sec-head h2 { margin: 0; font-size: 1.06rem; font-weight: 700;
+                 letter-spacing: -.005em; }
+  .sec-head p { margin: 0; color: var(--ink-soft); font-size: .87rem;
+                max-width: 68ch; }
+
+  .card { background: var(--surface); border: 1px solid var(--rule);
+          border-radius: 3px; padding: 16px 18px 12px; box-shadow: var(--shadow); }
+  .grid-2 { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px,1fr));
+            gap: 14px; }
+  .grid-4 { display: grid; grid-template-columns: repeat(auto-fit, minmax(232px,1fr));
+            gap: 14px; }
+
+  .chart-title { font-size: .82rem; font-weight: 700; margin: 0 0 1px; }
+  .chart-note { font-family: var(--mono); font-size: .68rem; color: var(--ink-mute);
+                margin: 0 0 10px; letter-spacing: .02em; }
+  /* **説明が2行になる言語がある。** 高さを先に確保しておかないと、
+     その1枚だけ数値の位置が下がって並びが崩れる。 */
+  .grid-4 .chart-note { min-height: 3.4em; }
+  .now { font-family: var(--mono); font-size: 1.5rem; font-weight: 600;
+         font-variant-numeric: tabular-nums; letter-spacing: -.02em;
+         margin: 2px 0 6px; }
+  .now .delta { font-size: .74rem; font-weight: 500; margin-left: 7px; }
+  .up   { color: var(--bad); }
+  .down { color: var(--good); }
+  .flat { color: var(--ink-mute); }
+
+  svg { display: block; width: 100%; height: auto; overflow: visible; }
+  .gridline { stroke: var(--rule-soft); stroke-width: 1; }
+  /* **JS で色を焼き込まない。** 属性に書くと、閲覧者がテーマを切り替えた
+     ときに SVG だけ前のテーマの色で取り残される。 */
+  .pt   { stroke: var(--surface); }
+  .rule-v { stroke: var(--marker); stroke-width: 1; }
+  .axis-txt { font-family: var(--mono); font-size: 9.5px; fill: var(--ink-mute); }
+  .axis-txt.ink { fill: var(--ink); }
+  /* 系列の色も同様にトークン経由。s1=藍 / s2=青緑 / s3=琥珀 */
+  .ln-s1 { stroke: var(--s1); } .ln-s2 { stroke: var(--s2); } .ln-s3 { stroke: var(--s3); }
+  .fl-s1 { fill: var(--s1); }   .fl-s2 { fill: var(--s2); }   .fl-s3 { fill: var(--s3); }
+  .ar-s1 { fill: var(--s1-fill); } .ar-s2 { fill: var(--s2-fill); }
+  .sw-s1 { background: var(--s1); --sw: var(--s1); }
+  .sw-s2 { background: var(--s2); --sw: var(--s2); }
+  .sw-s3 { background: var(--s3); --sw: var(--s3); }
+
+  /* ─── 凡例 ─── */
+  .legend { display: flex; flex-wrap: wrap; gap: 14px; margin: 9px 0 0;
+            font-size: .74rem; color: var(--ink-soft); }
+  .legend span { display: inline-flex; align-items: center; gap: 6px; }
+  .swatch { width: 11px; height: 3px; border-radius: 2px; display: inline-block; }
+  /* P90 は中央値と同じ色の破線。**色を分けるとどちらの裾か読めない。**
+     11px 幅に border-dashed を引いても破線に見えない（実測。実線と
+     見分けが付かなかった）ので、幅を足して縞で描く。 */
+  .swatch.dash {
+    width: 17px;
+    background: repeating-linear-gradient(90deg,
+      var(--sw) 0 4px, transparent 4px 7px);
+  }
+
+  /* グラフの読み方。**数字のすぐ下に置く。** */
+  .explain {
+    margin: 10px 0 2px; font-size: .78rem; line-height: 1.7;
+    color: var(--ink-soft); border-top: 1px solid var(--rule-soft);
+    padding-top: 9px;
+  }
+  .explain b { color: var(--ink); font-weight: 700; }
+  .explain .eg {
+    font-family: var(--mono); font-variant-numeric: tabular-nums;
+    color: var(--ink);
+  }
+
+  /* ─── 吹き出し ─── */
+  .tip {
+    position: fixed; pointer-events: none; opacity: 0; transition: opacity .1s;
+    background: var(--surface); border: 1px solid var(--rule); border-radius: 3px;
+    padding: 7px 10px; box-shadow: var(--shadow); z-index: 40;
+    font-family: var(--mono); font-size: .72rem; line-height: 1.55;
+    font-variant-numeric: tabular-nums; color: var(--ink); white-space: nowrap;
+  }
+  .tip b { font-weight: 600; }
+  .tip .k { color: var(--ink-mute); margin-right: 6px; }
+
+  /* ─── 表 ─── */
+  .tablebox { overflow-x: auto; border: 1px solid var(--rule); border-radius: 3px;
+              background: var(--surface); }
+  table { border-collapse: collapse; width: 100%; font-size: .8rem; min-width: 620px; }
+  th, td { padding: 8px 12px; text-align: right; border-bottom: 1px solid var(--rule-soft);
+           font-variant-numeric: tabular-nums; }
+  th { font-family: var(--mono); font-size: .66rem; font-weight: 500;
+       letter-spacing: .08em; text-transform: uppercase; color: var(--ink-mute);
+       background: var(--surface-2); position: sticky; top: 0; }
+  th:first-child, td:first-child { text-align: left; }
+  td.leg { font-family: var(--mono); font-weight: 600; letter-spacing: .01em; }
+  td.num { font-family: var(--mono); }
+  tbody tr:last-child td { border-bottom: 0; }
+  tbody tr:hover td { background: var(--surface-2); }
+
+  details { border: 1px solid var(--rule); border-radius: 3px;
+            background: var(--surface); padding: 0; }
+  summary { cursor: pointer; padding: 9px 14px; font-size: .8rem;
+            font-weight: 500; color: var(--ink-soft); }
+  summary:focus-visible { outline: 2px solid var(--s1); outline-offset: -2px; }
+  details[open] summary { border-bottom: 1px solid var(--rule); }
+  details .tablebox { border: 0; border-radius: 0; }
+  .stack { display: flex; flex-direction: column; gap: 14px; }
+  .tiles { display: flex; gap: 32px; flex-wrap: wrap; margin: 6px 0 0; }
+  .tiles .chart-note { margin: 0; }
+  /* 技術指標の畳み。開いたときは中身を地の色に置き、カードを浮かせる。 */
+  details.tech { background: var(--ground); }
+  .tech-body { padding: 14px 16px 18px; }
+  .card .tablebox { box-shadow: none; }
+  table.narrow { min-width: 520px; }
+  /* 判定の答え合わせ（方向別に2つ並べる） */
+  table.verd { min-width: 0; }
+  .verd-dir { margin: 0 0 8px; font-weight: 600; font-size: .84rem; color: var(--ink); }
+  .verd-dir .sub { margin-left: 8px; font-family: var(--mono); font-weight: 400;
+    font-size: .72rem; color: var(--ink-mute); }
+  table.narrow th:last-child { text-align: left; }
+  table.narrow td:last-child { text-align: left; color: var(--ink-soft); }
+
+  .caveat { border-left: 3px solid var(--s3); background: var(--surface);
+            border-radius: 0 3px 3px 0; padding: 13px 16px;
+            display: flex; flex-direction: column; gap: 7px; }
+  .caveat p { margin: 0; font-size: .85rem; color: var(--ink-soft); }
+  .caveat strong { color: var(--ink); font-weight: 700; }
+
+  footer { color: var(--ink-mute); font-size: .76rem; border-top: 1px solid var(--rule);
+           padding-top: 14px; }
+
+  @media (prefers-reduced-motion: reduce) {
+    * { transition: none !important; animation: none !important; }
+  }

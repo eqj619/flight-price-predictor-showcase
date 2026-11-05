@@ -1,0 +1,45 @@
+[Unit]
+Description=Flight Price Predictor (FastAPI + 日次収集スケジューラ)
+Documentation=https://github.com/eqj619/flight-price-predictor
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=fpp
+Group=fpp
+WorkingDirectory=/opt/fpp
+EnvironmentFile=/etc/fpp/env
+
+# --host 127.0.0.1: 外向きは Caddy だけ。uvicorn を直接公開しない。
+#
+# --no-proxy-headers: uvicorn 自身に X-Forwarded-For を解釈させない。
+#   既定では有効で、request.client.host をヘッダの値に差し替えてしまう。
+#   そうなると、アプリ側の TRUST_PROXY_HEADERS=false（安全側の既定）が
+#   意味を失う。ヘッダを信用する箇所はアプリの1か所に集約する。
+ExecStart=/opt/fpp/.venv/bin/uvicorn app.main:app \
+    --host 127.0.0.1 --port 8000 --no-proxy-headers
+
+Restart=always
+RestartSec=5
+# 収集は最長90分ほど走りうる。停止時は途中でも待たずに落としてよい
+# （snapshots は upsert なので翌日の実行で埋め直される）。
+TimeoutStopSec=20
+
+# --- 権限の絞り込み ---
+NoNewPrivileges=true
+PrivateTmp=true
+PrivateDevices=true
+ProtectSystem=strict
+ProtectHome=true
+ProtectKernelTunables=true
+ProtectKernelModules=true
+ProtectControlGroups=true
+RestrictSUIDSGID=true
+RestrictRealtime=true
+LockPersonality=true
+# 書き込みを許すのはデータディレクトリだけ（DB・ログ・IP ソルト）。
+ReadWritePaths=/var/lib/fpp
+
+[Install]
+WantedBy=multi-user.target

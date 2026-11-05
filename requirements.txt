@@ -1,0 +1,35 @@
+# Phase 1: 設定・DB。
+pydantic-settings>=2.0
+
+# Phase 2: 価格収集。
+# 非公式の Google Flights スクレイパ。壊れる前提で PriceProvider 抽象の
+# 裏に隔離してある（app/collect/provider.py）。
+fast-flights>=3.0.2
+
+# Phase 4: Web アプリ。
+# 匿名の公開エンドポイントが未検証入力（空港コード・日付・トークン）を
+# 受けるので、境界で pydantic を通せる FastAPI を使う。
+fastapi>=0.115
+uvicorn[standard]>=0.30
+
+# Phase 5: 日次スケジューラ。
+# 4.x は API が別物なので 3 系に固定する。
+apscheduler>=3.10,<4
+
+# Phase 6: 通知（課題4）。
+# Web Push。メールアドレスを持たずに通知できるので、匿名設計をほぼ保てる。
+# cryptography と py-vapid と http-ece を連れてくる。
+pywebpush>=2.0
+
+# --- 開発・テスト ---
+pytest>=8.0
+httpx2          # fastapi.testclient が使う
+
+# Chart.js は CDN ではなく static/vendor/ に置いてある。
+# CDN から読むと Referer ヘッダに /w/{token} がそのまま載るため。
+boto3>=1.34
+
+# 影の機械学習（2026-10-23、app/ml/drop_model.py）。利用者には見せない。
+# 数千行の表を勾配ブースティングで学習するだけなので、外部サービスは使わない。
+numpy>=2.0
+scikit-learn>=1.5

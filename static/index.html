@@ -1,0 +1,109 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>✈️ Flight Price Predictor</title>
+  <link rel="stylesheet" href="/static/css/style.css">
+  <link rel="manifest" href="/static/manifest.json">
+  <meta name="theme-color" content="#06060f">
+  <!-- **iOS は manifest の display を見ない。** ホーム画面に追加されたとき
+       単独窓で開くかは、この apple- 系のタグだけで決まる。そして iOS で
+       Web Push が使えるのは単独窓のときだけなので、ここが通知の前提になる。
+       status-bar-style は black。black-translucent だと内容が時計の下に
+       潜り込み、実機で確かめないと直せない崩れ方をする。 -->
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black">
+  <meta name="apple-mobile-web-app-title" content="Flights">
+  <link rel="apple-touch-icon" href="/static/apple-touch-icon.png">
+  <link rel="icon" href="/static/icon-192.png" type="image/png">
+</head>
+<body>
+  <header class="app-header">
+    <div class="wrap header-content">
+      <div>
+        <h1 class="logo">
+          <a class="logo-link" href="/">
+            <span>✈️</span>
+            <span>Flight Price <span class="logo-accent">Predictor</span></span>
+          </a>
+        </h1>
+        <p class="subtitle" data-i18n="app.tagline"></p>
+      </div>
+      <button id="langToggle" class="ghost small" type="button">🌐 EN</button>
+    </div>
+  </header>
+
+  <main class="wrap" style="padding-top:24px">
+    <section class="card">
+      <h2 data-i18n="form.title">Create a monitor</h2>
+      <form id="createForm" novalidate>
+        <div class="grid-3">
+          <label>
+            <span data-i18n="form.origin">From</span>
+            <input name="origin" maxlength="3" autocomplete="off"
+                   placeholder="NRT / Tokyo / 東京" required>
+          </label>
+          <label>
+            <span data-i18n="form.destination">To</span>
+            <input name="destination" maxlength="3" autocomplete="off"
+                   placeholder="SAN / San Diego" required>
+          </label>
+          <label>
+            <span data-i18n="form.departure">Departure date</span>
+            <input name="departure_date" type="date" required>
+          </label>
+        </div>
+        <div class="grid-3">
+          <label>
+            <span data-i18n="form.trip">Trip type</span>
+            <select name="trip_type" id="tripType">
+              <option value="one_way" data-i18n="form.oneWay">One way</option>
+              <option value="round_trip" data-i18n="form.roundTrip">Round trip</option>
+            </select>
+          </label>
+          <label id="returnField" hidden>
+            <span data-i18n="form.return">Return date</span>
+            <input name="return_date" type="date">
+          </label>
+        </div>
+        <label>
+          <span data-i18n="form.airlines">Filter airlines (optional, comma separated)</span>
+          <input name="airlines" autocomplete="off" placeholder="ZIPAIR, ANA">
+        </label>
+        <p class="hint" data-i18n="form.hint"></p>
+        <p id="formError" class="error" hidden></p>
+        <button id="submitBtn" type="submit" data-i18n="form.submit">Create monitor</button>
+      </form>
+    </section>
+
+    <section class="card">
+      <h2 data-i18n="mine.title">Your monitors</h2>
+      <p class="hint" data-i18n="mine.note"></p>
+
+      <div id="collectionBanner" class="collection-banner" hidden>
+        <p class="collection-lead" data-i18n="collection.lead"></p>
+        <div class="share-row">
+          <input id="collectionUrl" readonly>
+          <button id="copyCollection" type="button"
+                  data-i18n="collection.copy">Copy URL</button>
+        </div>
+        <p class="hint" data-i18n="collection.note"></p>
+      </div>
+      <!-- 値上がりの日を知らせられるモニターがあることを伝える（課題4）。
+           **一覧の上。** ここより下に置くと、モニターが数件ある人には
+           スクロールしないと見えない。 -->
+      <div id="notifyBanner" hidden></div>
+      <ul id="watchList" class="watch-list"></ul>
+      <p id="emptyNote" class="hint" data-i18n="mine.empty" hidden></p>
+    </section>
+  </main>
+
+  <script src="/static/js/i18n.js"></script>
+  <script src="/static/js/store.js"></script>
+  <script src="/static/js/airports.js"></script>
+  <script src="/static/js/push.js"></script>
+  <script src="/static/js/index.js"></script>
+</body>
+</html>

@@ -1,0 +1,467 @@
+<title>__TITLE__</title>
+<style>
+  /* 明るいテーマを基準に定義し、暗いテーマはトークンだけ差し替える。 */
+  :root {
+    --ocean:      #e8eef5;
+    --land:       #d0dae5;
+    --land-edge:  #b4c3d3;
+    --graticule:  rgba(90,115,145,.13);
+    --ink:        #16202c;
+    --ink-soft:   #47576b;
+    --ink-mute:   #7a8a9d;
+    --surface:    #ffffff;
+    --surface-2:  #f3f6fa;
+    --rule:       #dae2ec;
+    /* 航路: ルート数が少ない→多い。アプリ本体の accent を継承。 */
+    --arc-lo:     #6366f1;
+    --arc-hi:     #0891b2;
+    --node:       #c2610a;
+    --node-ring:  rgba(194,97,10,.22);
+    --shadow:     0 1px 2px rgba(20,32,48,.06), 0 8px 24px rgba(20,32,48,.07);
+    --mono: ui-monospace, "SF Mono", "Cascadia Mono", Menlo, Consolas, monospace;
+    --sans: -apple-system, BlinkMacSystemFont, "Hiragino Sans", "Noto Sans JP",
+            "Segoe UI", sans-serif;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --ocean:     #070c16;
+      --land:      #18212e;
+      --land-edge: #2b3849;
+      --graticule: rgba(150,175,205,.09);
+      --ink:       #eef3f8;
+      --ink-soft:  #a0b1c5;
+      --ink-mute:  #6c7d92;
+      --surface:   #0e1521;
+      --surface-2: #131c2a;
+      --rule:      #233040;
+      --arc-lo:    #818cf8;
+      --arc-hi:    #22d3ee;
+      --node:      #fbbf24;
+      --node-ring: rgba(251,191,36,.20);
+      --shadow:    0 1px 2px rgba(0,0,0,.4), 0 10px 30px rgba(0,0,0,.35);
+    }
+  }
+  :root[data-theme="dark"] {
+    --ocean:     #070c16;  --land:      #18212e;  --land-edge: #2b3849;
+    --graticule: rgba(150,175,205,.09);
+    --ink:       #eef3f8;  --ink-soft:  #a0b1c5;  --ink-mute:  #6c7d92;
+    --surface:   #0e1521;  --surface-2: #131c2a;  --rule:      #233040;
+    --arc-lo:    #818cf8;  --arc-hi:    #22d3ee;
+    --node:      #fbbf24;  --node-ring: rgba(251,191,36,.20);
+    --shadow:    0 1px 2px rgba(0,0,0,.4), 0 10px 30px rgba(0,0,0,.35);
+  }
+
+  * { box-sizing: border-box; }
+  body {
+    margin: 0; background: var(--surface-2); color: var(--ink);
+    font-family: var(--sans); line-height: 1.65;
+    -webkit-font-smoothing: antialiased;
+  }
+  .wrap { max-width: 1180px; margin: 0 auto; padding: 40px 22px 72px; }
+
+  header { display: flex; flex-direction: column; gap: 10px; margin-bottom: 26px; }
+  .eyebrow {
+    font-family: var(--mono); font-size: .7rem; letter-spacing: .18em;
+    text-transform: uppercase; color: var(--ink-mute);
+  }
+  h1 {
+    margin: 0; font-size: clamp(1.6rem, 3.6vw, 2.15rem); font-weight: 700;
+    letter-spacing: -.02em; text-wrap: balance;
+  }
+  .lede { margin: 0; max-width: 64ch; color: var(--ink-soft); font-size: .96rem; }
+
+  /* ── 数字の帯 ── */
+  .stats {
+    display: grid; grid-template-columns: repeat(auto-fit, minmax(132px, 1fr));
+    gap: 1px; background: var(--rule); border: 1px solid var(--rule);
+    border-radius: 8px; overflow: hidden; margin: 22px 0 18px;
+  }
+  .stat { background: var(--surface); padding: 13px 16px; }
+  .stat dt {
+    margin: 0 0 2px; font-size: .66rem; letter-spacing: .12em;
+    text-transform: uppercase; color: var(--ink-mute); font-weight: 700;
+  }
+  .stat dd {
+    margin: 0; font-family: var(--mono); font-size: 1.32rem; font-weight: 600;
+    font-variant-numeric: tabular-nums; letter-spacing: -.02em;
+  }
+  .stat dd small {
+    font-size: .68rem; font-weight: 400; color: var(--ink-mute);
+    margin-left: 5px; letter-spacing: 0;
+  }
+
+  /* ── 地図 ── */
+  .map-shell {
+    background: var(--ocean); border: 1px solid var(--rule);
+    border-radius: 10px; overflow: hidden; box-shadow: var(--shadow);
+    position: relative;
+  }
+  canvas { display: block; width: 100%; height: auto; }
+  .legend {
+    display: flex; flex-wrap: wrap; gap: 8px 22px; align-items: center;
+    padding: 11px 16px; border-top: 1px solid var(--rule);
+    background: var(--surface); font-size: .78rem; color: var(--ink-soft);
+  }
+  .key { display: flex; align-items: center; gap: 7px; }
+  .key i { display: block; border-radius: 999px; flex: none; }
+  .ramp {
+    width: 74px; height: 5px; border-radius: 999px;
+    background: linear-gradient(90deg, var(--arc-lo), var(--arc-hi));
+  }
+  .dot { width: 9px; height: 9px; background: var(--node);
+         box-shadow: 0 0 0 3px var(--node-ring); }
+  figcaption {
+    margin-top: 11px; font-size: .78rem; color: var(--ink-mute);
+    max-width: 78ch;
+  }
+
+  /* ── 表 ── */
+  section { margin-top: 44px; }
+  h2 {
+    margin: 0 0 4px; font-size: 1.05rem; font-weight: 700; letter-spacing: -.01em;
+  }
+  .sub { margin: 0 0 16px; color: var(--ink-mute); font-size: .86rem; max-width: 70ch; }
+  .table-wrap {
+    overflow-x: auto; border: 1px solid var(--rule); border-radius: 8px;
+    background: var(--surface);
+  }
+  table { width: 100%; border-collapse: collapse; font-size: .86rem; }
+  th {
+    text-align: left; padding: 10px 14px; background: var(--surface-2);
+    font-size: .64rem; letter-spacing: .12em; text-transform: uppercase;
+    color: var(--ink-mute); font-weight: 700; white-space: nowrap;
+    border-bottom: 1px solid var(--rule); position: sticky; top: 0;
+  }
+  td { padding: 9px 14px; border-bottom: 1px solid var(--rule); }
+  tbody tr:last-child td { border-bottom: none; }
+  tbody tr { cursor: default; transition: background .12s ease; }
+  tbody tr:hover, tbody tr:focus-within { background: var(--surface-2); }
+  .leg { font-family: var(--mono); font-weight: 600; white-space: nowrap; }
+  .arrow { color: var(--ink-mute); margin: 0 3px; font-weight: 400; }
+  .num {
+    text-align: right; font-family: var(--mono);
+    font-variant-numeric: tabular-nums; white-space: nowrap;
+  }
+  .bar { position: relative; min-width: 108px; }
+  .bar span {
+    display: block; height: 5px; border-radius: 999px;
+    background: linear-gradient(90deg, var(--arc-lo), var(--arc-hi));
+  }
+  .tag {
+    display: inline-block; padding: 1px 7px; border-radius: 3px;
+    font-size: .64rem; font-weight: 700; letter-spacing: .04em;
+    border: 1px solid var(--rule); color: var(--ink-mute); white-space: nowrap;
+  }
+  .tag.core { border-color: transparent; background: var(--arc-hi); color: #04121a; }
+
+  .note {
+    margin-top: 18px; padding: 13px 16px; background: var(--surface);
+    border-left: 3px solid var(--arc-hi); border-radius: 0 6px 6px 0;
+    font-size: .87rem; color: var(--ink-soft);
+  }
+  .note b { color: var(--ink); }
+  footer {
+    margin-top: 52px; padding-top: 18px; border-top: 1px solid var(--rule);
+    font-size: .76rem; color: var(--ink-mute);
+  }
+  :focus-visible { outline: 2px solid var(--arc-hi); outline-offset: 2px; }
+</style>
+
+<div class="wrap">
+<header>
+  <span class="eyebrow" id="eyebrow"></span>
+  <h1 id="h1"></h1>
+  <p class="lede" id="lede"></p>
+</header>
+
+<dl class="stats" id="stats"></dl>
+
+<figure style="margin:0">
+  <div class="map-shell">
+    <canvas id="map"></canvas>
+    <div class="legend">
+      <span class="key"><i class="ramp"></i> <span id="keyRamp"></span></span>
+      <span class="key"><i class="dot"></i> <span id="keyDot"></span></span>
+      <span class="key" style="color:var(--ink-mute)" id="keyHint"></span>
+    </div>
+  </div>
+  <figcaption id="caption"></figcaption>
+</figure>
+
+<section>
+  <h2 id="h2"></h2>
+  <p class="sub" id="sub"></p>
+  <div class="table-wrap">
+    <table>
+      <thead><tr id="head"></tr></thead>
+      <tbody id="rows"></tbody>
+    </table>
+  </div>
+  <div class="note" id="split"></div>
+</section>
+
+<footer id="footer"></footer>
+</div>
+
+<script id="strings" type="application/json">__STRINGS__</script>
+<script id="data" type="application/json">__DATA__</script>
+<script>
+(function () {
+  const D = JSON.parse(document.getElementById('data').textContent);
+  const S = JSON.parse(document.getElementById('strings').textContent);
+
+  // 文言はすべて STRINGS 由来。日英で構造・投影・配色は共有する。
+  const set = (id, v) => { const el = document.getElementById(id); if (el) el.textContent = v; };
+  // Artifact 側が <html> を用意するので、言語は JS から立てる。
+  // スクリーンリーダーの読み上げ言語と、行間・約物の扱いに効く。
+  document.documentElement.lang = S.lang;
+  ['eyebrow','h1','lede','caption','h2','sub'].forEach((k) => set(k, S[k]));
+  set('keyRamp', S.key_ramp); set('keyDot', S.key_dot); set('keyHint', S.key_hint);
+  document.getElementById('map').setAttribute('aria-label', S.map_alt);
+  document.getElementById('footer').innerHTML = S.footer;
+  document.getElementById('head').innerHTML =
+    `<th>${S.th_leg}</th><th>${S.th_kind}</th>`
+    + `<th class="num">${S.th_routes}</th><th class="num">${S.th_dates}</th>`
+    + `<th class="num">${S.th_records}</th><th style="width:34%">${S.th_bar}</th>`;
+
+  // ── 投影 ────────────────────────────────────────────────
+  // **太平洋を中心に置く。** グリニッジ中心の世界地図だと、主要な
+  // 西海岸⇄東京の路線がすべて左右の端に分断されて読めなくなる。
+  //
+  // 経度は折り返さない。折り返すと大陸が継ぎ目で切れ、断片を直線で
+  // 閉じたときに存在しない三角形が描かれる（ユーラシアは継ぎ目を6回
+  // またぐ 1,299 頂点の多角形で、実際にそれが起きた）。
+  // 代わりに**世界を横に -w, 0, +w とずらして3回描く**。多角形は連続した
+  // ままで、画面外はキャンバスが切り落とす。
+  const CENTER = 180;
+  const LAT_TOP = 78, LAT_BOTTOM = -58;   // 極地は空くだけなので切る
+  const OFFSETS = [-1, 0, 1];
+  const xOf = (lon, w) => ((lon - CENTER) / 360) * w + w / 2;
+  const ny = (lat) => (LAT_TOP - lat) / (LAT_TOP - LAT_BOTTOM);
+
+  // 大圏の補間点は atan2 由来で ±180 をまたぐと飛ぶ。連続させてから描く。
+  function unwrap(lonlats) {
+    const out = [];
+    let prev = null;
+    for (const [lat, lon] of lonlats) {
+      let l = lon;
+      if (prev !== null) {
+        while (l - prev >  180) l -= 360;
+        while (l - prev < -180) l += 360;
+      }
+      out.push([lat, l]);
+      prev = l;
+    }
+    return out;
+  }
+
+  // ── 大圏（最短経路）の補間 ──────────────────────────────
+  const rad = Math.PI / 180;
+  function greatCircle(a, b, steps) {
+    const p1 = [a.lat * rad, a.lon * rad], p2 = [b.lat * rad, b.lon * rad];
+    const d = 2 * Math.asin(Math.sqrt(
+      Math.sin((p2[0] - p1[0]) / 2) ** 2 +
+      Math.cos(p1[0]) * Math.cos(p2[0]) * Math.sin((p2[1] - p1[1]) / 2) ** 2));
+    const out = [];
+    for (let i = 0; i <= steps; i++) {
+      const f = i / steps;
+      if (d === 0) { out.push([a.lat, a.lon]); continue; }
+      const A = Math.sin((1 - f) * d) / Math.sin(d);
+      const B = Math.sin(f * d) / Math.sin(d);
+      const x = A * Math.cos(p1[0]) * Math.cos(p1[1]) + B * Math.cos(p2[0]) * Math.cos(p2[1]);
+      const y = A * Math.cos(p1[0]) * Math.sin(p1[1]) + B * Math.cos(p2[0]) * Math.sin(p2[1]);
+      const z = A * Math.sin(p1[0]) + B * Math.sin(p2[0]);
+      out.push([Math.atan2(z, Math.hypot(x, y)) / rad, Math.atan2(y, x) / rad]);
+    }
+    return out;
+  }
+
+  const byCode = {};
+  D.airports.forEach((a) => { byCode[a.code] = a; });
+  const maxLeg  = Math.max(...D.legs.map((l) => l.routes));
+  const maxNode = Math.max(...D.airports.map((a) => a.routes));
+  const css = (n) => getComputedStyle(document.documentElement).getPropertyValue(n).trim();
+
+  let hot = null;   // 強調している区間
+
+  const canvas = document.getElementById('map');
+  const ctx = canvas.getContext('2d');
+
+  function size() {
+    const w = canvas.parentElement.clientWidth;
+    const h = Math.round(w * (LAT_TOP - LAT_BOTTOM) / 360);
+    const dpr = Math.min(window.devicePixelRatio || 1, 2);
+    canvas.width = w * dpr; canvas.height = h * dpr;
+    canvas.style.height = h + 'px';
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    return { w, h };
+  }
+
+  // 折り返さずに引き、世界を3回ずらして描く。
+  function stroke(points, w, h) {
+    for (const k of OFFSETS) {
+      ctx.beginPath();
+      points.forEach(([lat, lon], i) => {
+        const x = xOf(lon, w) + k * w, y = ny(lat) * h;
+        i ? ctx.lineTo(x, y) : ctx.moveTo(x, y);
+      });
+      ctx.stroke();
+    }
+  }
+  function fillRing(ring, w, h, alsoStroke) {
+    for (const k of OFFSETS) {
+      ctx.beginPath();
+      ring.forEach(([lon, lat], i) => {
+        const x = xOf(lon, w) + k * w, y = ny(lat) * h;
+        i ? ctx.lineTo(x, y) : ctx.moveTo(x, y);
+      });
+      ctx.closePath();
+      ctx.fill();
+      if (alsoStroke) ctx.stroke();
+    }
+  }
+
+  function draw() {
+    const { w, h } = size();
+    ctx.clearRect(0, 0, w, h);
+
+    ctx.fillStyle = css('--ocean'); ctx.fillRect(0, 0, w, h);
+
+    // 緯線・経線
+    ctx.strokeStyle = css('--graticule'); ctx.lineWidth = 1;
+    for (let lat = -40; lat <= 60; lat += 20) {
+      ctx.beginPath(); ctx.moveTo(0, ny(lat) * h); ctx.lineTo(w, ny(lat) * h); ctx.stroke();
+    }
+    for (let lon = -180; lon < 180; lon += 30) {
+      for (const k of OFFSETS) {
+        const x = xOf(lon, w) + k * w;
+        if (x < -1 || x > w + 1) continue;
+        ctx.beginPath(); ctx.moveTo(x, 0); ctx.lineTo(x, h); ctx.stroke();
+      }
+    }
+
+    // 陸地
+    ctx.fillStyle = css('--land');
+    ctx.strokeStyle = css('--land-edge'); ctx.lineWidth = 0.6;
+    D.land.types.forEach((type, i) => {
+      const geom = D.land.polys[i];
+      const polys = type === 'Polygon' ? [geom] : geom;
+      polys.forEach((poly) => poly.forEach((ring) => {
+        // **表示範囲より下の多角形は描かない。** 南極大陸の外周は経度が
+        // -180 と +180 の両端を含み、頂点が隣り合ったまま反対側へ飛ぶ。
+        // 表示は緯度 -58 までなので、描く必要がそもそもない。
+        let top = -90;
+        for (const [, lat] of ring) if (lat > top) top = lat;
+        if (top < LAT_BOTTOM) return;
+        fillRing(ring, w, h, true);
+      }));
+    });
+
+    // 航路（少ない順に描き、太い線を上に重ねる）
+    const legs = [...D.legs].sort((a, b) => a.routes - b.routes);
+    ctx.lineCap = 'round';
+    for (const l of legs) {
+      const a = byCode[l.o], b = byCode[l.d];
+      if (!a || !b) continue;
+      const f = l.routes / maxLeg;
+      const on = hot && hot.o === l.o && hot.d === l.d;
+      ctx.strokeStyle = on ? css('--node') : mix(css('--arc-lo'), css('--arc-hi'), f);
+      ctx.globalAlpha = on ? 1 : 0.30 + 0.55 * f;
+      ctx.lineWidth = on ? 3.4 : 0.8 + 3.0 * f;
+      stroke(unwrap(greatCircle(a, b, 96)), w, h);
+    }
+    ctx.globalAlpha = 1;
+
+    // 空港
+    for (const a of D.airports) {
+      const r = 2.2 + 5.2 * Math.sqrt(a.routes / maxNode);
+      let x = xOf(a.lon, w), y = ny(a.lat) * h;
+      // 3つの複製のうち、画面内に入るものを使う。
+      for (const k of OFFSETS) {
+        const c = xOf(a.lon, w) + k * w;
+        if (c >= 0 && c <= w) { x = c; break; }
+      }
+      ctx.beginPath(); ctx.arc(x, y, r + 3, 0, Math.PI * 2);
+      ctx.fillStyle = css('--node-ring'); ctx.fill();
+      ctx.beginPath(); ctx.arc(x, y, r, 0, Math.PI * 2);
+      ctx.fillStyle = css('--node'); ctx.fill();
+
+      // 主要な空港だけラベル。全部出すと重なって読めない。
+      if (a.routes >= maxNode * 0.28 || (hot && (hot.o === a.code || hot.d === a.code))) {
+        ctx.font = '600 11px ' + css('--mono');
+        ctx.fillStyle = css('--ink');
+        ctx.textAlign = x > w * 0.82 ? 'right' : 'left';
+        ctx.textBaseline = 'middle';
+        const dx = x > w * 0.82 ? -(r + 6) : (r + 6);
+        ctx.strokeStyle = css('--ocean'); ctx.lineWidth = 3;
+        ctx.strokeText(a.code, x + dx, y);
+        ctx.fillText(a.code, x + dx, y);
+      }
+    }
+  }
+
+  function mix(c1, c2, f) {
+    const p = (c) => {
+      const s = c.replace('#', '');
+      return [0, 2, 4].map((i) => parseInt(s.substr(i, 2), 16));
+    };
+    const [a, b] = [p(c1), p(c2)];
+    return 'rgb(' + a.map((v, i) => Math.round(v + (b[i] - v) * f)).join(',') + ')';
+  }
+
+  // ── 数字の帯 ────────────────────────────────────────────
+  const core = new Set(S.core);
+  const isCore = (l) => core.has(l.o) && core.has(l.d);
+  const coreRoutes = D.legs.filter(isCore).reduce((s, l) => s + l.routes, 0);
+
+  document.getElementById('stats').innerHTML = [
+    [S.stat_routes, D.totals.routes, ''],
+    [S.stat_legs, D.totals.legs, ''],
+    [S.stat_airports, D.totals.airports, ''],
+    [S.stat_records, D.totals.records.toLocaleString(), ''],
+    [S.stat_core, Math.round(coreRoutes / D.totals.routes * 100) + '%',
+     S.stat_core_sub.replace('{n}', coreRoutes)],
+  ].map(([k, v, s]) =>
+    `<div class="stat"><dt>${k}</dt><dd>${v}${s ? `<small>${s}</small>` : ''}</dd></div>`
+  ).join('');
+
+  // ── 表 ──────────────────────────────────────────────────
+  const rows = [...D.legs].sort((a, b) => b.routes - a.routes || b.records - a.records);
+  document.getElementById('rows').innerHTML = rows.map((l) => `
+    <tr tabindex="0" data-o="${l.o}" data-d="${l.d}">
+      <td class="leg">${l.o}<span class="arrow">→</span>${l.d}</td>
+      <td>${isCore(l) ? `<span class="tag core">${S.tag_core}</span>`
+                      : `<span class="tag">${S.tag_other}</span>`}</td>
+      <td class="num">${l.routes}</td>
+      <td class="num">${l.dates}</td>
+      <td class="num">${l.records.toLocaleString()}</td>
+      <td class="bar"><span style="width:${(l.routes / maxLeg * 100).toFixed(1)}%"></span></td>
+    </tr>`).join('');
+
+  const outside = D.totals.routes - coreRoutes;
+  const coreLegs = D.legs.filter(isCore).length;
+  const restLegs = D.legs.length - coreLegs;
+  document.getElementById('split').innerHTML = S.split
+    .replace('{total}', D.totals.routes).replace('{core}', coreRoutes)
+    .replace('{pct}', Math.round(coreRoutes / D.totals.routes * 100))
+    .replace('{core_legs}', coreLegs).replace('{rest}', outside)
+    .replace('{rest_legs}', restLegs)
+    .replace('{avg}', (outside / restLegs).toFixed(1));
+
+  document.getElementById('rows').addEventListener('mouseover', (e) => {
+    const tr = e.target.closest('tr'); if (!tr) return;
+    hot = { o: tr.dataset.o, d: tr.dataset.d }; draw();
+  });
+  document.getElementById('rows').addEventListener('focusin', (e) => {
+    const tr = e.target.closest('tr'); if (!tr) return;
+    hot = { o: tr.dataset.o, d: tr.dataset.d }; draw();
+  });
+  document.getElementById('rows').addEventListener('mouseleave', () => { hot = null; draw(); });
+
+  draw();
+  let t; window.addEventListener('resize', () => { clearTimeout(t); t = setTimeout(draw, 120); });
+  if (window.matchMedia) {
+    window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', draw);
+  }
+})();
+</script>

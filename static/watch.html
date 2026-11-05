@@ -1,0 +1,217 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <!-- 共有 URL がトークンごと検索エンジンに載らないようにする。
+       HTTP ヘッダ側でも X-Robots-Tag を返している（app/main.py）。 -->
+  <meta name="robots" content="noindex, nofollow">
+  <meta name="referrer" content="no-referrer">
+  <title>✈️ Flight Price Predictor</title>
+  <link rel="stylesheet" href="/static/css/style.css">
+  <link rel="manifest" href="/static/manifest.json">
+  <meta name="theme-color" content="#06060f">
+  <!-- **iOS は manifest の display を見ない。** ホーム画面に追加されたとき
+       単独窓で開くかは、この apple- 系のタグだけで決まる。そして iOS で
+       Web Push が使えるのは単独窓のときだけなので、ここが通知の前提になる。
+       status-bar-style は black。black-translucent だと内容が時計の下に
+       潜り込み、実機で確かめないと直せない崩れ方をする。 -->
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black">
+  <meta name="apple-mobile-web-app-title" content="Flights">
+  <link rel="apple-touch-icon" href="/static/apple-touch-icon.png">
+  <link rel="icon" href="/static/icon-192.png" type="image/png">
+</head>
+<body>
+
+  <header class="app-header">
+    <div class="wrap header-content">
+      <div>
+        <h1 class="logo">
+          <!-- ロゴからトップへ戻れるようにする（Web の慣習）。
+               モニター画面から新しいモニターを作る導線がこれと下の
+               ボタンの2つ。 -->
+          <a class="logo-link" href="/">
+            <span>✈️</span>
+            <span>Flight Price <span class="logo-accent">Predictor</span></span>
+          </a>
+        </h1>
+        <p class="subtitle" id="subtitle"></p>
+      </div>
+      <div class="header-right">
+        <!-- 切り替え先はこのブラウザで作ったモニター（localStorage の索引）。
+             data-i18n は textContent を書き換えるので select には付けない
+             （option が消える）。ラベルは JS から aria-label で入れる。 -->
+        <select id="monitorSwitch" class="monitor-switch" hidden></select>
+        <a class="new-monitor" href="/" data-i18n="nav.newMonitor">+ New monitor</a>
+        <button id="langToggle" class="ghost small" type="button">🌐 EN</button>
+        <span class="status-indicator">
+          <span class="status-dot" id="statusDot"></span>
+          <span id="statusText"></span>
+        </span>
+      </div>
+    </div>
+  </header>
+
+  <nav class="nav-tabs wrap" id="navTabs">
+    <button class="nav-tab active" data-tab="dashboard" data-i18n="nav.dashboard">📊 Dashboard</button>
+    <button class="nav-tab" data-tab="trends" data-i18n="nav.trends">📈 Price Trends</button>
+    <button class="nav-tab" data-tab="timing" data-i18n="nav.timing">🎯 Buy Timing</button>
+    <button class="nav-tab" data-tab="settings" data-i18n="nav.settings">⚙️ Settings</button>
+    <button class="nav-tab" data-tab="changelog" data-i18n="nav.changelog">📝 What’s new</button>
+  </nav>
+
+  <main class="wrap">
+    <p id="loading" style="padding:32px 0" data-i18n="watch.loading">Loading…</p>
+    <p id="notFound" class="error" style="padding:32px 0" data-i18n="watch.notFound" hidden></p>
+
+    <!-- ── ダッシュボード ── -->
+    <section id="tab-dashboard" class="tab-content active" hidden>
+      <!-- 通知の誘い（課題4）。**最初のタブの先頭に置く。**
+           3人に2人は作った日以外このページを開かない（2026-09-08 実測）ので、
+           タブを移らないと見えない場所では届かない。 -->
+      <div id="notifyOffer"></div>
+      <div id="modelNoticeDash"></div>
+      <div class="summary-cards" id="summaryCards"></div>
+
+      <div class="section-header">
+        <h2 data-i18n="dash.routeBest">🛫 Best price by route</h2>
+        <span class="section-sub" id="routeBestSub"></span>
+      </div>
+      <div class="route-comparison" id="routeComparison"></div>
+
+      <div class="section-header">
+        <h2 id="topListTitle" data-i18n="dash.top10">🏆 Cheapest flights TOP 10</h2>
+        <span class="section-sub" id="topListSub"></span>
+      </div>
+      <div class="card table-wrap"><table id="topTable"></table></div>
+    </section>
+
+    <!-- ── 価格トレンド ── -->
+    <section id="tab-trends" class="tab-content" hidden>
+      <div id="modelNoticeTrends"></div>
+      <div class="chart-switch" id="chartSwitch"></div>
+      <p id="sweetSpotNote" class="sweet-note" hidden></p>
+      <div class="flight-switch">
+        <label for="flightSelect" data-i18n="chart.followLabel"></label>
+        <select id="flightSelect"></select>
+      </div>
+      <div class="card">
+        <div class="chart-wrapper"><canvas id="priceChart"></canvas></div>
+        <p class="hint" style="margin-top:12px" data-i18n="chart.perFlightNote"></p>
+        <p class="hint" style="margin-top:6px" data-i18n="chart.bandNote"></p>
+      </div>
+    </section>
+
+    <!-- ── 買い時分析 ── -->
+    <section id="tab-timing" class="tab-content" hidden>
+      <div id="timingBody"></div>
+    </section>
+
+    <!-- ── 設定 ── -->
+    <section id="tab-settings" class="tab-content" hidden>
+      <!-- 通知（課題4）。VAPID 鍵が未設定なら丸ごと隠す。 -->
+      <div class="card" id="pushCard" hidden>
+        <h2 data-i18n="push.title">Notifications</h2>
+        <p class="hint" data-i18n="push.note"></p>
+        <label class="airline-choice" id="pushRow" style="margin-top:12px">
+          <input type="checkbox" id="pushToggle">
+          <span data-i18n="push.label">Notify me on this monitor</span>
+        </label>
+        <p id="pushStatus" class="meta" style="margin-top:10px"></p>
+        <p class="hint" style="margin-top:10px" data-i18n="push.privacy"></p>
+      </div>
+
+      <div class="card">
+        <h2 data-i18n="settings.nearby">Nearby airports</h2>
+        <p class="hint" data-i18n="settings.nearbyNote"></p>
+        <label class="airline-choice" style="margin-top:12px" id="nearbyRow">
+          <input type="checkbox" id="nearbyToggle">
+          <span data-i18n="settings.nearbyLabel">Also monitor nearby airports</span>
+        </label>
+        <p id="nearbyRoutes" class="meta" style="margin-top:10px"></p>
+        <span id="nearbyStatus" class="meta"></span>
+      </div>
+
+      <div class="card" id="fxCard" hidden>
+        <h2 data-i18n="settings.currency">Currency</h2>
+        <p class="hint" id="fxNote"></p>
+      </div>
+
+      <div class="card">
+        <h2 data-i18n="settings.maxDuration">Maximum trip duration</h2>
+        <p class="hint" data-i18n="settings.maxDurationNote"></p>
+        <div class="airline-actions" style="margin-top:12px">
+          <select id="maxDuration">
+            <option value="720">12h</option>
+            <option value="960">16h</option>
+            <option value="1200">20h</option>
+            <option value="1440">24h</option>
+            <option value="1800">30h</option>
+            <option value="0" data-i18n="settings.noLimit">No limit</option>
+          </select>
+          <span id="maxDurationStatus" class="meta"></span>
+        </div>
+        <p id="maxDurationExcluded" class="meta" style="margin-top:10px"></p>
+      </div>
+
+      <div class="card">
+        <h2 data-i18n="settings.airlineFilter">Airlines to monitor</h2>
+        <p class="hint" data-i18n="settings.airlineFilterNote"></p>
+        <div class="airline-actions">
+          <button id="airlineAll" class="ghost small" type="button"
+                  data-i18n="filter.selectAll">Select all</button>
+          <button id="airlineNone" class="ghost small" type="button"
+                  data-i18n="filter.clear">Clear</button>
+        </div>
+        <div id="airlineChoices" class="airline-choices"></div>
+        <p id="airlineEmpty" class="hint" data-i18n="filter.empty" hidden></p>
+        <div class="airline-save">
+          <button id="airlineSave" type="button" data-i18n="filter.save">Save</button>
+          <span id="airlineStatus" class="meta"></span>
+        </div>
+      </div>
+
+      <div class="card">
+        <h2 data-i18n="settings.share">Share</h2>
+        <p class="hint" data-i18n="watch.share"></p>
+        <div class="share-row">
+          <input id="shareUrl" readonly>
+          <button id="copyBtn" type="button" data-i18n="watch.copy">Copy URL</button>
+        </div>
+      </div>
+
+      <div class="card">
+        <h2 data-i18n="settings.sysInfo">System info</h2>
+        <dl class="facts" id="sysInfo"></dl>
+      </div>
+
+      <div class="card">
+        <h2 data-i18n="settings.danger">Delete monitor</h2>
+        <p class="hint" data-i18n="settings.deleteNote"></p>
+        <button id="deleteBtn" type="button" class="danger" style="margin-top:10px"
+                data-i18n="watch.delete">Delete this monitor</button>
+      </div>
+    </section>
+
+    <!-- ── 更新履歴 ── -->
+    <section id="tab-changelog" class="tab-content" hidden>
+      <div class="card">
+        <p class="hint" data-i18n="changelog.intro"></p>
+        <div id="changelogBody"></div>
+      </div>
+    </section>
+  </main>
+
+  <!-- Chart.js は CDN ではなくここに置いてある。CDN から読むと、その
+       リクエストの Referer ヘッダに /w/{token} がそのまま載るため。 -->
+  <script src="/static/vendor/chart.umd.min.js"></script>
+  <script src="/static/js/i18n.js"></script>
+  <script src="/static/js/changelog.js"></script>
+  <script src="/static/js/store.js"></script>
+  <script src="/static/js/push.js"></script>
+  <script src="/static/js/chart.js"></script>
+  <script src="/static/js/watch.js"></script>
+</body>
+</html>

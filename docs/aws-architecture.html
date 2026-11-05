@@ -1,0 +1,902 @@
+<title>AWS 構成図 — flight-price-predictor</title>
+<style>
+  :root {
+    --ground:      #eef1f4;
+    --surface:     #ffffff;
+    --surface-2:   #f4f6f8;
+    --ink:         #16212d;
+    --ink-soft:    #40505f;
+    --muted:       #64748b;
+    --rule:        #d3dae1;
+    --rule-soft:   #e4e9ee;
+
+    /* AWS グループ境界 */
+    --aws-cloud:   #232f3e;
+    --aws-region:  #00a4a6;
+    --aws-group:   #7d8998;
+    /* AWS カテゴリ配色 */
+    --c-compute:   #ed7100;
+    --c-network:   #8c4fff;
+    --c-storage:   #7aa116;
+    --c-security:  #dd344c;
+    --accent:      #ec7211;
+
+    --diagram-bg:  #ffffff;
+    --chip:        #f4f6f8;
+    --chip-line:   #cfd7de;
+    --arrow:       #5a6b7b;
+
+    --sans: "Amazon Ember", "Segoe UI", system-ui, -apple-system,
+            "Helvetica Neue", "Hiragino Sans", "Noto Sans JP", sans-serif;
+    --mono: ui-monospace, "SF Mono", "Cascadia Mono", Menlo, Consolas, monospace;
+  }
+
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --ground:    #0d141c;
+      --surface:   #16212d;
+      --surface-2: #1b2836;
+      --ink:       #e9eef3;
+      --ink-soft:  #b3c0cc;
+      --muted:     #8496a6;
+      --rule:      #2b3947;
+      --rule-soft: #223040;
+
+      --aws-cloud: #93a3b4;
+      --aws-region:#3fc7c9;
+      --aws-group: #7d8998;
+      --c-compute: #ff8c1a;
+      --c-network: #a678ff;
+      --c-storage: #97c22c;
+      --c-security:#f0566d;
+      --accent:    #ff9233;
+
+      --diagram-bg:#111b25;
+      --chip:      #1b2836;
+      --chip-line: #33424f;
+      --arrow:     #8496a6;
+    }
+  }
+
+  :root[data-theme="dark"] {
+    --ground:    #0d141c;
+    --surface:   #16212d;
+    --surface-2: #1b2836;
+    --ink:       #e9eef3;
+    --ink-soft:  #b3c0cc;
+    --muted:     #8496a6;
+    --rule:      #2b3947;
+    --rule-soft: #223040;
+
+    --aws-cloud: #93a3b4;
+    --aws-region:#3fc7c9;
+    --aws-group: #7d8998;
+    --c-compute: #ff8c1a;
+    --c-network: #a678ff;
+    --c-storage: #97c22c;
+    --c-security:#f0566d;
+    --accent:    #ff9233;
+
+    --diagram-bg:#111b25;
+    --chip:      #1b2836;
+    --chip-line: #33424f;
+    --arrow:     #8496a6;
+  }
+
+  * { box-sizing: border-box; }
+
+  body {
+    margin: 0;
+    background: var(--ground);
+    color: var(--ink);
+    font-family: var(--sans);
+    line-height: 1.7;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  .wrap { max-width: 1120px; margin: 0 auto; padding: 0 24px 88px; }
+
+  /* ─── ヘッダー ─── */
+  header {
+    padding: 56px 0 32px;
+    display: flex; flex-direction: column; gap: 14px;
+  }
+  .eyebrow {
+    font-size: .72rem; letter-spacing: .16em; text-transform: uppercase;
+    color: var(--accent); font-weight: 700;
+  }
+  h1 {
+    margin: 0; font-size: clamp(1.8rem, 4vw, 2.5rem); line-height: 1.2;
+    font-weight: 700; letter-spacing: -.015em; text-wrap: balance;
+  }
+  .lede { margin: 0; max-width: 62ch; color: var(--ink-soft); font-size: 1.02rem; }
+
+  .facts {
+    display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+    gap: 1px; background: var(--rule); border: 1px solid var(--rule);
+    border-radius: 6px; overflow: hidden; margin-top: 10px;
+  }
+  .fact { background: var(--surface); padding: 14px 16px; }
+  .fact dt {
+    font-size: .68rem; letter-spacing: .1em; text-transform: uppercase;
+    color: var(--muted); font-weight: 700; margin: 0 0 3px;
+  }
+  .fact dd {
+    margin: 0; font-family: var(--mono); font-size: .9rem;
+    font-variant-numeric: tabular-nums; color: var(--ink);
+  }
+
+  /* ─── セクション ─── */
+  section { margin-top: 56px; }
+  h2 {
+    margin: 0 0 6px; font-size: 1.22rem; font-weight: 700;
+    letter-spacing: -.01em; padding-bottom: 10px;
+    border-bottom: 2px solid var(--aws-cloud);
+  }
+  .sub { margin: 0 0 22px; color: var(--muted); font-size: .92rem; max-width: 68ch; }
+
+  /* ─── 図 ─── */
+  .figure {
+    background: var(--diagram-bg); border: 1px solid var(--rule);
+    border-radius: 6px; padding: 18px; overflow-x: auto;
+  }
+  .figure svg { display: block; min-width: 940px; width: 100%; height: auto; }
+  figcaption {
+    margin-top: 12px; font-size: .8rem; color: var(--muted);
+    padding-top: 10px; border-top: 1px solid var(--rule-soft);
+  }
+
+  /* ─── 凡例 ─── */
+  .legend {
+    display: grid; grid-template-columns: repeat(auto-fit, minmax(210px, 1fr));
+    gap: 10px 26px; margin-top: 18px; font-size: .84rem;
+  }
+  .legend div { display: flex; align-items: center; gap: 9px; color: var(--ink-soft); }
+  .swatch { width: 15px; height: 15px; border-radius: 3px; flex: none; }
+  .swatch.line { height: 0; border-top: 2px solid var(--aws-region); border-radius: 0; }
+  .swatch.solid-line { height: 0; border-top: 2px solid var(--aws-cloud); border-radius: 0; }
+
+  /* ─── 番号付き手順 ─── */
+  ol.flow { list-style: none; counter-reset: step; padding: 0; margin: 22px 0 0; }
+  ol.flow li {
+    counter-increment: step; position: relative;
+    padding: 12px 0 12px 46px; border-top: 1px solid var(--rule-soft);
+    font-size: .93rem; color: var(--ink-soft);
+  }
+  ol.flow li::before {
+    content: counter(step); position: absolute; left: 0; top: 13px;
+    width: 25px; height: 25px; border-radius: 50%;
+    background: var(--accent); color: #fff;
+    font-size: .76rem; font-weight: 700;
+    display: grid; place-items: center;
+    font-variant-numeric: tabular-nums;
+  }
+  ol.flow li b { color: var(--ink); font-weight: 600; }
+
+  /* ─── 表 ─── */
+  .table-wrap { overflow-x: auto; border: 1px solid var(--rule); border-radius: 6px; }
+  table { width: 100%; border-collapse: collapse; font-size: .88rem; background: var(--surface); }
+  th {
+    text-align: left; padding: 11px 14px; background: var(--surface-2);
+    font-size: .68rem; letter-spacing: .1em; text-transform: uppercase;
+    color: var(--muted); font-weight: 700; white-space: nowrap;
+    border-bottom: 1px solid var(--rule);
+  }
+  td { padding: 11px 14px; border-bottom: 1px solid var(--rule-soft); vertical-align: top; }
+  tbody tr:last-child td { border-bottom: none; }
+  td.mono, td .mono { font-family: var(--mono); font-size: .84rem; font-variant-numeric: tabular-nums; }
+  td.num { text-align: right; font-family: var(--mono); font-variant-numeric: tabular-nums; white-space: nowrap; }
+  tfoot td { font-weight: 700; background: var(--surface-2); border-top: 1px solid var(--rule); }
+
+  .tag {
+    display: inline-block; padding: 1px 7px; border-radius: 3px;
+    font-size: .68rem; font-weight: 700; letter-spacing: .04em;
+    color: #fff; white-space: nowrap;
+  }
+  .t-compute  { background: var(--c-compute); }
+  .t-network  { background: var(--c-network); }
+  .t-storage  { background: var(--c-storage); }
+  .t-security { background: var(--c-security); }
+  .t-ext      { background: var(--muted); }
+
+  .note {
+    margin-top: 20px; padding: 14px 18px; background: var(--surface);
+    border-left: 3px solid var(--aws-region); border-radius: 0 4px 4px 0;
+    font-size: .9rem; color: var(--ink-soft);
+  }
+  .note b { color: var(--ink); }
+
+  footer {
+    margin-top: 64px; padding-top: 20px; border-top: 1px solid var(--rule);
+    font-size: .8rem; color: var(--muted);
+  }
+  code {
+    font-family: var(--mono); font-size: .86em;
+    background: var(--surface-2); padding: 1px 5px; border-radius: 3px;
+  }
+
+  /* 図中テキスト */
+  .d-label   { font-family: var(--sans); font-size: 12px; fill: var(--ink); font-weight: 600; }
+  .d-sub     { font-family: var(--mono); font-size: 10px; fill: var(--muted); }
+  .d-group   { font-family: var(--sans); font-size: 11.5px; font-weight: 700; letter-spacing: .04em; }
+  .d-edge    { font-family: var(--mono); font-size: 10px; fill: var(--muted); }
+  .d-step    { font-family: var(--sans); font-size: 11px; font-weight: 700; fill: #fff; }
+</style>
+
+<div class="wrap">
+
+<header>
+  <span class="eyebrow">AWS Architecture · us-west-2</span>
+  <h1>flight-price-predictor — AWS 構成図</h1>
+  <p class="lede">
+    航空券の価格を日次で収集し、出発日までの推移を予測して買い時を提示する Web アプリの本番構成。
+    Amazon Lightsail 1インスタンスに集約し、TLS 終端・アプリ・スケジューラ・データベースを同居させている。
+  </p>
+  <dl class="facts">
+    <div class="fact"><dt>リージョン</dt><dd>us-west-2a</dd></div>
+    <div class="fact"><dt>公開 URL</dt><dd>flights.suosolutions.com</dd></div>
+    <div class="fact"><dt>静的 IP</dt><dd>（非公開）</dd></div>
+    <div class="fact"><dt>インスタンス</dt><dd>micro_3_0</dd></div>
+    <div class="fact"><dt>月額</dt><dd>$7.20</dd></div>
+  </dl>
+</header>
+
+<section>
+  <h2>全体構成</h2>
+  <p class="sub">
+    左が AWS の外側にある登場人物、右が AWS Cloud の内側。番号は下の「リクエストの流れ」に対応する。
+  </p>
+
+  <figure class="figure">
+    <svg viewBox="0 0 1200 700" role="img"
+         aria-label="AWS architecture diagram. A single Amazon Lightsail instance in us-west-2a runs Caddy, FastAPI, the scheduler and SQLite. Outside AWS: the user's browser, DNS, Let's Encrypt and Google Flights.">
+
+      <defs>
+        <marker id="ah" viewBox="0 0 10 10" refX="9" refY="5"
+                markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+          <path d="M0,0 L10,5 L0,10 z" fill="var(--arrow)"/>
+        </marker>
+        <marker id="ah2" viewBox="0 0 10 10" refX="1" refY="5"
+                markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+          <path d="M10,0 L0,5 L10,10 z" fill="var(--arrow)"/>
+        </marker>
+      </defs>
+
+      <!-- ═══ グループ: AWS Cloud ═══ -->
+      <rect x="232" y="26" width="944" height="648" rx="4"
+            fill="none" stroke="var(--aws-cloud)" stroke-width="2"/>
+      <g transform="translate(246,42)">
+        <rect x="0" y="0" width="19" height="19" rx="3" fill="var(--aws-cloud)"/>
+        <path d="M4,12.5 a3.2,3.2 0 0 1 1.2,-6 a4.2,4.2 0 0 1 8,0.6 a2.9,2.9 0 0 1 1.6,5.4 z"
+              fill="var(--diagram-bg)"/>
+        <text x="26" y="14" class="d-group" fill="var(--aws-cloud)">AWS Cloud</text>
+      </g>
+
+      <!-- ═══ グループ: リージョン ═══ -->
+      <rect x="260" y="72" width="890" height="580" rx="4"
+            fill="none" stroke="var(--aws-region)" stroke-width="2" stroke-dasharray="7 5"/>
+      <text x="276" y="94" class="d-group" fill="var(--aws-region)">Region &#183; us-west-2</text>
+
+      <!-- ═══ グループ: アベイラビリティゾーン ═══ -->
+      <rect x="288" y="118" width="700" height="512" rx="4"
+            fill="none" stroke="var(--aws-region)" stroke-width="1.5" stroke-dasharray="4 4"
+            opacity="0.75"/>
+      <text x="302" y="139" class="d-group" fill="var(--aws-region)" opacity="0.9">
+        Availability Zone &#183; us-west-2a</text>
+
+      <!-- ═══ 静的 IP + ファイアウォール ═══ -->
+      <g transform="translate(320,158)">
+        <rect x="0" y="0" width="196" height="56" rx="4"
+              fill="var(--chip)" stroke="var(--chip-line)"/>
+        <rect x="12" y="12" width="32" height="32" rx="5" fill="var(--c-network)"/>
+        <path d="M20,28 h16 M24,22 v12 M32,22 v12" stroke="#fff" stroke-width="2"
+              stroke-linecap="round" fill="none"/>
+        <text x="54" y="26" class="d-label">Static IP</text>
+        <text x="54" y="42" class="d-sub">（非公開）</text>
+      </g>
+      <g transform="translate(534,158)">
+        <rect x="0" y="0" width="188" height="56" rx="4"
+              fill="var(--chip)" stroke="var(--chip-line)"/>
+        <rect x="12" y="12" width="32" height="32" rx="5" fill="var(--c-security)"/>
+        <path d="M28,17 l10,4 v7 c0,6 -4,9 -10,11 c-6,-2 -10,-5 -10,-11 v-7 z"
+              fill="#fff"/>
+        <text x="54" y="26" class="d-label">Firewall</text>
+        <text x="54" y="42" class="d-sub">80 / 443 · SSH: browser only</text>
+      </g>
+
+      <!-- ═══ グループ: Lightsail インスタンス ═══ -->
+      <rect x="314" y="240" width="656" height="336" rx="4"
+            fill="none" stroke="var(--aws-group)" stroke-width="1.5" stroke-dasharray="3 3"/>
+      <g transform="translate(328,254)">
+        <rect x="0" y="0" width="22" height="22" rx="4" fill="var(--c-compute)"/>
+        <path d="M11,4 c5,4 6,10 3,15 h-6 c-3,-5 -2,-11 3,-15 z" fill="#fff"/>
+        <text x="30" y="12" class="d-group" fill="var(--c-compute)">Amazon Lightsail</text>
+        <text x="30" y="26" class="d-sub">flight-price-predictor · Ubuntu 24.04 · 2 vCPU / 1 GB / 40 GB SSD</text>
+      </g>
+
+      <!-- Caddy -->
+      <g transform="translate(338,318)">
+        <rect x="0" y="0" width="170" height="104" rx="4"
+              fill="var(--chip)" stroke="var(--chip-line)"/>
+        <rect x="14" y="14" width="30" height="30" rx="5" fill="none"
+              stroke="var(--ink-soft)" stroke-width="1.6"/>
+        <path d="M23,29 v-4 a6,6 0 0 1 12,0 v4" fill="none"
+              stroke="var(--ink-soft)" stroke-width="1.6"/>
+        <rect x="22" y="29" width="14" height="10" rx="2" fill="var(--ink-soft)"/>
+        <text x="14" y="64" class="d-label">Caddy</text>
+        <text x="14" y="80" class="d-sub">TLS term. :443 / :80</text>
+        <text x="14" y="94" class="d-sub">X-Forwarded-For rewrite</text>
+      </g>
+
+      <!-- FastAPI / uvicorn -->
+      <g transform="translate(533,318)">
+        <rect x="0" y="0" width="170" height="104" rx="4"
+              fill="var(--chip)" stroke="var(--chip-line)"/>
+        <rect x="14" y="14" width="30" height="30" rx="5" fill="none"
+              stroke="var(--ink-soft)" stroke-width="1.6"/>
+        <path d="M21,24 h16 M21,30 h16 M21,36 h9" stroke="var(--ink-soft)"
+              stroke-width="1.6" stroke-linecap="round"/>
+        <text x="14" y="64" class="d-label">FastAPI / uvicorn</text>
+        <text x="14" y="80" class="d-sub">127.0.0.1:8000</text>
+        <text x="14" y="94" class="d-sub">--no-proxy-headers</text>
+      </g>
+
+      <!-- SQLite -->
+      <g transform="translate(728,318)">
+        <rect x="0" y="0" width="170" height="104" rx="4"
+              fill="var(--chip)" stroke="var(--chip-line)"/>
+        <g stroke="var(--ink-soft)" stroke-width="1.6" fill="none">
+          <ellipse cx="29" cy="19" rx="15" ry="5.5"/>
+          <path d="M14,19 v18 c0,3 6.7,5.5 15,5.5 s15,-2.5 15,-5.5 v-18"/>
+          <path d="M14,28 c0,3 6.7,5.5 15,5.5 s15,-2.5 15,-5.5"/>
+        </g>
+        <text x="14" y="64" class="d-label">SQLite</text>
+        <text x="14" y="80" class="d-sub">/var/lib/fpp/</text>
+        <text x="14" y="94" class="d-sub">flights.db</text>
+      </g>
+
+      <!-- APScheduler -->
+      <g transform="translate(533,458)">
+        <rect x="0" y="0" width="170" height="98" rx="4"
+              fill="var(--chip)" stroke="var(--chip-line)"/>
+        <g stroke="var(--ink-soft)" stroke-width="1.6" fill="none">
+          <circle cx="29" cy="29" r="15"/>
+          <path d="M29,20 v10 l7,4" stroke-linecap="round"/>
+        </g>
+        <text x="14" y="64" class="d-label">APScheduler</text>
+        <text x="14" y="80" class="d-sub">Daily 03:00 PT</text>
+      </g>
+
+      <!-- ═══ 自動スナップショット ═══ -->
+      <g transform="translate(1012,318)">
+        <rect x="0" y="0" width="122" height="104" rx="4"
+              fill="var(--chip)" stroke="var(--chip-line)"/>
+        <rect x="45" y="14" width="32" height="32" rx="5" fill="var(--c-storage)"/>
+        <g fill="#fff">
+          <rect x="52" y="24" width="18" height="13" rx="2"/>
+          <circle cx="61" cy="30.5" r="3.4" fill="var(--c-storage)"/>
+          <rect x="57" y="20" width="8" height="4" rx="1"/>
+        </g>
+        <text x="16" y="66" class="d-label">Automatic</text>
+        <text x="16" y="82" class="d-label">Snapshot</text>
+        <text x="16" y="96" class="d-sub">Daily 11:00 UTC</text>
+      </g>
+
+      <!-- ═══ Amazon S3（KPI）═══
+           AZ の枠の外に置く。S3 はリージョン単位のサービスで、
+           特定の AZ に属さない。 -->
+      <g transform="translate(1012,458)">
+        <rect x="0" y="0" width="122" height="104" rx="4"
+              fill="var(--chip)" stroke="var(--chip-line)"/>
+        <rect x="45" y="14" width="32" height="32" rx="5" fill="var(--c-storage)"/>
+        <g fill="#fff">
+          <ellipse cx="61" cy="24" rx="8.5" ry="3"/>
+          <path d="M52.5,24 h17 l-2,13.5 a6.5,2.6 0 0 1 -13,0 z"/>
+        </g>
+        <text x="16" y="66" class="d-label">Amazon S3</text>
+        <text x="16" y="82" class="d-sub">fpp-kpi-…</text>
+        <text x="16" y="96" class="d-sub">kpi/daily.csv</text>
+      </g>
+
+      <!-- ═══ AWS 外の登場人物 ═══ -->
+      <g transform="translate(38,92)">
+        <rect x="0" y="0" width="158" height="76" rx="4"
+              fill="var(--surface-2)" stroke="var(--rule)"/>
+        <g fill="var(--muted)">
+          <circle cx="30" cy="28" r="9"/>
+          <path d="M14,54 a16,16 0 0 1 32,0 z"/>
+        </g>
+        <text x="56" y="32" class="d-label">User</text>
+        <text x="56" y="48" class="d-sub">Browser</text>
+      </g>
+
+      <g transform="translate(38,202)">
+        <rect x="0" y="0" width="158" height="76" rx="4"
+              fill="var(--surface-2)" stroke="var(--rule)"/>
+        <g stroke="var(--c-network)" stroke-width="1.8" fill="none">
+          <circle cx="30" cy="38" r="14"/>
+          <ellipse cx="30" cy="38" rx="6" ry="14"/>
+          <path d="M16,38 h28 M19,30 h22 M19,46 h22"/>
+        </g>
+        <text x="56" y="34" class="d-label">DNS</text>
+        <text x="56" y="50" class="d-sub">A record</text>
+      </g>
+
+      <g transform="translate(38,324)">
+        <rect x="0" y="0" width="158" height="76" rx="4"
+              fill="var(--surface-2)" stroke="var(--rule)"/>
+        <g fill="none" stroke="var(--muted)" stroke-width="1.8">
+          <path d="M22,36 v-5 a8,8 0 0 1 16,0 v5"/>
+        </g>
+        <rect x="20" y="36" width="20" height="15" rx="2.5" fill="var(--muted)"/>
+        <text x="56" y="34" class="d-label">Let's Encrypt</text>
+        <text x="56" y="50" class="d-sub">ACME · HTTP-01</text>
+      </g>
+
+      <g transform="translate(38,452)">
+        <rect x="0" y="0" width="158" height="76" rx="4"
+              fill="var(--surface-2)" stroke="var(--rule)"/>
+        <path d="M14,40 l30,-9 l0,-9 a3,3 0 0 1 6,0 l0,9 l0,0 l-6,20 l3,7 l-9,-3 l-9,3 l3,-7 z"
+              fill="var(--muted)" transform="rotate(38 30 38)"/>
+        <text x="56" y="34" class="d-label">Google Flights</text>
+        <text x="56" y="50" class="d-sub">fast_flights</text>
+      </g>
+
+      <!-- ═══ 経路 ═══ -->
+      <!-- ① 名前解決（外部で完結するので破線） -->
+      <path d="M117,168 L117,202" stroke="var(--arrow)" stroke-width="1.6"
+            stroke-dasharray="4 4" fill="none" marker-end="url(#ah)"/>
+      <circle cx="139" cy="185" r="10" fill="var(--accent)"/>
+      <text x="139" y="189" class="d-step" text-anchor="middle">1</text>
+
+      <!-- ② HTTPS -->
+      <path d="M196,124 L280,124 Q300,124 300,146 L300,186 L320,186"
+            stroke="var(--arrow)" stroke-width="1.8" fill="none" marker-end="url(#ah)"/>
+      <text x="212" y="116" class="d-edge">HTTPS 443</text>
+      <circle cx="268" cy="124" r="10" fill="var(--accent)"/>
+      <text x="268" y="128" class="d-step" text-anchor="middle">2</text>
+
+      <!-- ③ 静的IP → Caddy
+           番号は Lightsail グループのヘッダー帯（"Amazon Lightsail" とその下の
+           仕様行、y≈254-283）を避けて、その下の空きに置く。ヘッダー帯は
+           x≈748 まで文字が伸びるので、同じ高さで右へ寄せても抜けられない。 -->
+      <path d="M418,214 L418,318" stroke="var(--arrow)" stroke-width="1.8"
+            fill="none" marker-end="url(#ah)"/>
+      <circle cx="466" cy="300" r="10" fill="var(--accent)"/>
+      <text x="466" y="304" class="d-step" text-anchor="middle">3</text>
+
+      <!-- ④ Caddy → FastAPI -->
+      <path d="M508,370 L533,370" stroke="var(--arrow)" stroke-width="1.8"
+            fill="none" marker-end="url(#ah)"/>
+      <circle cx="520" cy="344" r="10" fill="var(--accent)"/>
+      <text x="520" y="348" class="d-step" text-anchor="middle">4</text>
+
+      <!-- ⑤ FastAPI → SQLite -->
+      <path d="M703,370 L728,370" stroke="var(--arrow)" stroke-width="1.8"
+            fill="none" marker-end="url(#ah)" marker-start="url(#ah2)"/>
+      <circle cx="715" cy="344" r="10" fill="var(--accent)"/>
+      <text x="715" y="348" class="d-step" text-anchor="middle">5</text>
+
+      <!-- ⑥ スケジューラ → Google Flights -->
+      <path d="M533,500 L240,500 Q212,500 212,514 L212,528"
+            stroke="var(--arrow)" stroke-width="1.8" fill="none" marker-end="url(#ah)"/>
+      <text x="330" y="492" class="d-edge">HTTPS (outbound)</text>
+      <circle cx="300" cy="500" r="10" fill="var(--accent)"/>
+      <text x="300" y="504" class="d-step" text-anchor="middle">6</text>
+
+      <!-- ⑦ スケジューラ → SQLite -->
+      <path d="M703,486 Q760,486 782,432" stroke="var(--arrow)" stroke-width="1.8"
+            fill="none" marker-end="url(#ah)"/>
+      <circle cx="757" cy="474" r="10" fill="var(--accent)"/>
+      <text x="757" y="478" class="d-step" text-anchor="middle">7</text>
+
+      <!-- ⑧ Let's Encrypt ↔ Caddy -->
+      <path d="M196,362 L338,362" stroke="var(--arrow)" stroke-width="1.6"
+            fill="none" marker-end="url(#ah)" marker-start="url(#ah2)"/>
+      <circle cx="267" cy="362" r="10" fill="var(--accent)"/>
+      <text x="267" y="366" class="d-step" text-anchor="middle">8</text>
+
+      <!-- ⑨ インスタンス → スナップショット -->
+      <path d="M970,370 L1012,370" stroke="var(--arrow)" stroke-width="1.8"
+            fill="none" marker-end="url(#ah)"/>
+      <circle cx="991" cy="344" r="10" fill="var(--accent)"/>
+      <text x="991" y="348" class="d-step" text-anchor="middle">9</text>
+
+      <!-- ⑩ インスタンス → S3（KPI の書き出し。PutObject のみ） -->
+      <path d="M970,510 L1012,510" stroke="var(--arrow)" stroke-width="1.8"
+            fill="none" marker-end="url(#ah)"/>
+      <text x="991" y="532" class="d-edge" text-anchor="middle">PutObject</text>
+      <circle cx="991" cy="484" r="11" fill="var(--accent)"/>
+      <text x="991" y="488" class="d-step" text-anchor="middle">10</text>
+    </svg>
+
+    <figcaption>
+      色付きの角丸アイコンは AWS サービス（AWS のカテゴリ配色に準拠）。
+      灰色の枠はインスタンス内で動く非 AWS のプロセス。左端の淡い枠は AWS の外にある依存先。
+    </figcaption>
+  </figure>
+
+  <div class="legend">
+    <div><span class="swatch solid-line"></span>AWS Cloud boundary</div>
+    <div><span class="swatch line"></span>Region / Availability Zone</div>
+    <div><span class="swatch" style="background:var(--c-compute)"></span>Compute</div>
+    <div><span class="swatch" style="background:var(--c-network)"></span>Networking &amp; Content Delivery</div>
+    <div><span class="swatch" style="background:var(--c-storage)"></span>Storage</div>
+    <div><span class="swatch" style="background:var(--c-security)"></span>Security, Identity &amp; Compliance</div>
+  </div>
+
+  <ol class="flow">
+    <li><b>名前解決。</b> ブラウザが <code>flights.suosolutions.com</code> を引く。
+      権威 DNS は Google のネームサーバ（レジストラは Squarespace）で、
+      <b>AWS の外</b>にある。A レコードが静的 IP を指す。</li>
+    <li><b>HTTPS 接続。</b> 443/TCP で Lightsail のファイアウォールを通過する。
+      80 も開けてあるのは <span class="mono">8</span> の証明書更新のためで、Caddy が HTTPS へ 308 リダイレクトする。</li>
+    <li><b>TLS 終端。</b> Caddy が証明書を提示し、
+      <code>X-Forwarded-For</code> を接続元で<b>上書き</b>してから転送する。
+      追記のままだとクライアントが偽の IP を名乗り、登録のレート制限を素通りできる。</li>
+    <li><b>リバースプロキシ。</b> <code>127.0.0.1:8000</code> の uvicorn へ。
+      アプリは外部ポートを持たない。uvicorn 自身のヘッダ解釈は切ってあり、
+      ヘッダを信用する箇所をアプリ1か所に集約している。</li>
+    <li><b>読み書き。</b> FastAPI が SQLite を読み書きする。
+      モニター・価格履歴・予測ログをすべて同じファイルに持つ。</li>
+    <li><b>価格収集。</b> 毎日 03:00（America/Los_Angeles）にスケジューラが起動し、
+      Google Flights へ問い合わせる。<b>唯一の外向き通信</b>。
+      1ルートあたり3検索、2〜5秒の間隔を空けて叩く。</li>
+    <li><b>収集結果の保存。</b> 実測値を <code>snapshots</code> に upsert し、
+      較正済みの予測を <code>prediction_log</code> に残す。</li>
+    <li><b>証明書の取得と更新。</b> Caddy が ACME の HTTP-01 チャレンジで
+      Let's Encrypt から証明書を取り、期限前に自動更新する。</li>
+    <li><b>バックアップ。</b> 毎日 11:00 UTC（収集の直後）にインスタンス全体の
+      スナップショットを自動取得する。</li>
+    <li><b>KPI の書き出し。</b> 収集の直後に、その日の利用状況を1行 CSV に追記し、
+      S3 へまるごと置き換える。<b>ローカルの CSV が正で、S3 はその写し</b>。
+      逆にするとアップロードが失敗した日の行が永久に欠ける。
+      アップロードの失敗は握りつぶす — S3 が落ちていることが価格収集の失敗になってはいけない。</li>
+  </ol>
+
+  <div class="note">
+    <b>VPC を描いていないのは省略ではない。</b> Lightsail はネットワークを抽象化しており、
+    サブネットやルートテーブルを利用者が構成しない。公開範囲はインスタンス単位のファイアウォールで決まる。
+  </div>
+</section>
+
+<section>
+  <h2>日次ジョブの流れ</h2>
+  <p class="sub">
+上図の <span class="mono">6</span>〜<span class="mono">7</span> と <span class="mono">10</span> を時系列に開いたもの。
+    <b>順序に意味がある</b> — 整理を収集より先に行う。逆にすると、その日で失効するモニターのために価格を取りに行ってしまう。
+  </p>
+
+  <figure class="figure">
+    <svg viewBox="0 0 1300 232" role="img"
+         aria-label="Daily job pipeline: concurrency guard, lifecycle cleanup, price collection, logging predictions, then recording KPI to Amazon S3.">
+      <defs>
+        <marker id="ah3" viewBox="0 0 10 10" refX="9" refY="5"
+                markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+          <path d="M0,0 L10,5 L0,10 z" fill="var(--arrow)"/>
+        </marker>
+      </defs>
+
+      <!-- トリガ -->
+      <g transform="translate(20,74)">
+        <rect x="0" y="0" width="150" height="84" rx="4"
+              fill="var(--surface-2)" stroke="var(--rule)"/>
+        <text x="16" y="32" class="d-label">03:00 PT</text>
+        <text x="16" y="50" class="d-sub">APScheduler</text>
+        <text x="16" y="66" class="d-sub">CronTrigger</text>
+      </g>
+      <path d="M170,116 L212,116" stroke="var(--arrow)" stroke-width="1.8"
+            fill="none" marker-end="url(#ah3)"/>
+
+      <!-- ガード -->
+      <g transform="translate(212,74)">
+        <rect x="0" y="0" width="176" height="84" rx="4"
+              fill="var(--chip)" stroke="var(--c-security)" stroke-width="1.5"/>
+        <text x="16" y="30" class="d-label">Concurrency guard</text>
+        <text x="16" y="48" class="d-sub">Skip if previous run</text>
+        <text x="16" y="64" class="d-sub">is still in progress</text>
+      </g>
+      <path d="M388,116 L430,116" stroke="var(--arrow)" stroke-width="1.8"
+            fill="none" marker-end="url(#ah3)"/>
+
+      <!-- 整理 -->
+      <g transform="translate(430,74)">
+        <rect x="0" y="0" width="176" height="84" rx="4"
+              fill="var(--chip)" stroke="var(--chip-line)"/>
+        <text x="16" y="30" class="d-label">1. Lifecycle cleanup</text>
+        <text x="16" y="48" class="d-sub">Delete expired watches</text>
+        <text x="16" y="64" class="d-sub">Deactivate orphan routes</text>
+      </g>
+      <path d="M606,116 L648,116" stroke="var(--arrow)" stroke-width="1.8"
+            fill="none" marker-end="url(#ah3)"/>
+
+      <!-- 収集 -->
+      <g transform="translate(648,74)">
+        <rect x="0" y="0" width="176" height="84" rx="4"
+              fill="var(--chip)" stroke="var(--c-compute)" stroke-width="1.5"/>
+        <text x="16" y="30" class="d-label">2. Price collection</text>
+        <text x="16" y="48" class="d-sub">Active routes only</text>
+        <text x="16" y="64" class="d-sub">3 searches per route</text>
+      </g>
+      <path d="M824,116 L866,116" stroke="var(--arrow)" stroke-width="1.8"
+            fill="none" marker-end="url(#ah3)"/>
+
+      <!-- 予測 -->
+      <g transform="translate(866,74)">
+        <rect x="0" y="0" width="176" height="84" rx="4"
+              fill="var(--chip)" stroke="var(--chip-line)"/>
+        <text x="16" y="30" class="d-label">3. Log predictions</text>
+        <text x="16" y="48" class="d-sub">Calibrate &#8594; band</text>
+        <text x="16" y="64" class="d-sub">1/3/7/14/30 days ahead</text>
+      </g>
+      <path d="M1042,116 L1084,116" stroke="var(--arrow)" stroke-width="1.8"
+            fill="none" marker-end="url(#ah3)"/>
+
+      <!-- KPI -->
+      <g transform="translate(1084,74)">
+        <rect x="0" y="0" width="176" height="84" rx="4"
+              fill="var(--chip)" stroke="var(--c-storage)" stroke-width="1.5"/>
+        <text x="16" y="30" class="d-label">4. Record KPI</text>
+        <text x="16" y="48" class="d-sub">Append 1 row to CSV</text>
+        <text x="16" y="64" class="d-sub">Mirror to Amazon S3</text>
+      </g>
+
+      <!-- 注記 -->
+      <text x="212" y="34" class="d-edge">
+        Collection can run up to 90 min &#8212; never run it twice.</text>
+      <text x="430" y="196" class="d-edge">
+        No step raises. Failures are written to collection_logs and the job moves on.</text>
+      <text x="1084" y="34" class="d-edge">KPI comes after collection &#8212;</text>
+      <text x="1084" y="48" class="d-edge">before it, the day&#8217;s totals would be empty.</text>
+      <path d="M518,166 L518,182" stroke="var(--arrow)" stroke-width="1" stroke-dasharray="3 3"/>
+      <path d="M736,166 L736,182" stroke="var(--arrow)" stroke-width="1" stroke-dasharray="3 3"/>
+      <path d="M954,166 L954,182" stroke="var(--arrow)" stroke-width="1" stroke-dasharray="3 3"/>
+      <path d="M1172,166 L1172,182" stroke="var(--arrow)" stroke-width="1" stroke-dasharray="3 3"/>
+    </svg>
+  </figure>
+</section>
+
+<section>
+  <h2>構成要素</h2>
+  <p class="sub">AWS サービスと、インスタンス内で動くプロセス。</p>
+
+  <div class="table-wrap">
+    <table>
+      <thead>
+        <tr><th>要素</th><th>区分</th><th>設定</th><th>役割</th></tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td><b>Amazon Lightsail</b><br><span class="mono">flight-price-predictor</span></td>
+          <td><span class="tag t-compute">Compute</span></td>
+          <td class="mono">micro_3_0<br>Ubuntu 24.04<br>2 vCPU / 1 GB / 40 GB</td>
+          <td>アプリ・スケジューラ・DB をすべて同居させる唯一の計算資源。<br>
+            メモリ実測 412 MB / 911 MB。</td>
+        </tr>
+        <tr>
+          <td><b>Lightsail 静的 IP</b><br><span class="mono">fpp-ip</span></td>
+          <td><span class="tag t-network">Networking</span></td>
+          <td class="mono">（非公開）</td>
+          <td>再起動で IP が変わると DNS が外れるため固定する。<br>アタッチ中は無料。</td>
+        </tr>
+        <tr>
+          <td><b>Lightsail ファイアウォール</b></td>
+          <td><span class="tag t-security">Security</span></td>
+          <td class="mono">80 / 443 TCP<br>22 は browser SSH のみ</td>
+          <td>インスタンス単位の公開範囲。80 は ACME チャレンジ用。<br>
+            <b>22 は平時は閉じてある</b>（<code>lightsail-connect</code> 経由のみ）。
+            配備時だけ作業端末の IP へ一時的に開ける。</td>
+        </tr>
+        <tr>
+          <td><b>Amazon S3</b><br><span class="mono">fpp-kpi-（アカウントID）</span></td>
+          <td><span class="tag t-storage">Storage</span></td>
+          <td class="mono">us-west-2<br>kpi/daily.csv</td>
+          <td>利用状況 KPI の保管先。1日1行・23列の CSV を毎日置き換える。<br>
+            Block Public Access 全オン、バージョニング有効、既定暗号化 AES256。</td>
+        </tr>
+        <tr>
+          <td><b>AWS Budgets</b><br><span class="mono">2 budgets</span></td>
+          <td><span class="tag t-ext">Billing</span></td>
+          <td class="mono">$10 全体<br>$12 Lightsail</td>
+          <td>費用の逸脱を通知する。実績 85% / 実績 100% / 予測 100% の3段階。<br>
+            <b>2つまで無料</b>（3つ目から月 $0.62）。宛先は SNS と違い確認手続き不要。</td>
+        </tr>
+        <tr>
+          <td><b>IAM ユーザー</b><br><span class="mono">fpp-kpi-writer</span></td>
+          <td><span class="tag t-security">Security</span></td>
+          <td class="mono">s3:PutObject<br>kpi/* 限定</td>
+          <td>KPI の書き出し専用。<b>読み取り・一覧・削除・他プレフィックスはすべて拒否</b>される
+            ことを実測で確認済み。キーは <span class="mono">/etc/fpp/env</span>（<span class="mono">root:fpp 0640</span>）。</td>
+        </tr>
+        <tr>
+          <td><b>自動スナップショット</b></td>
+          <td><span class="tag t-storage">Storage</span></td>
+          <td class="mono">毎日 11:00 UTC</td>
+          <td>価格履歴はモニター削除後も残す設計なので、失うと痛い。<br>
+            収集（03:00 PT = 10:00 UTC）の直後に取る。</td>
+        </tr>
+        <tr>
+          <td><b>Caddy</b> 2.11.4</td>
+          <td><span class="tag t-ext">On instance</span></td>
+          <td class="mono">:443 / :80</td>
+          <td>TLS 終端と自動更新、HSTS、<code>X-Forwarded-For</code> の上書き、
+            トークンを含むパスのアクセスログ抑止。</td>
+        </tr>
+        <tr>
+          <td><b>FastAPI / uvicorn</b></td>
+          <td><span class="tag t-ext">On instance</span></td>
+          <td class="mono">127.0.0.1:8000<br>systemd</td>
+          <td>API と静的配信。<code>ProtectSystem=strict</code> で
+            書き込みは <code>/var/lib/fpp</code> のみ許可。</td>
+        </tr>
+        <tr>
+          <td><b>APScheduler</b></td>
+          <td><span class="tag t-ext">On instance</span></td>
+          <td class="mono">毎日 03:00 PT</td>
+          <td>アプリと同一プロセス。多重起動ガード付き。</td>
+        </tr>
+        <tr>
+          <td><b>SQLite</b></td>
+          <td><span class="tag t-ext">On instance</span></td>
+          <td class="mono">/var/lib/fpp/<br>flights.db</td>
+          <td>7テーブル。WAL モードで収集（書き）と閲覧（読み）を並行させる。</td>
+        </tr>
+        <tr>
+          <td><b>DNS</b></td>
+          <td><span class="tag t-ext">External</span></td>
+          <td class="mono">ns-cloud-e*.<br>googledomains.com</td>
+          <td>レジストラは Squarespace、権威 DNS は Google。<br>
+            追加したのは <code>flights</code> の A レコード1本のみ。</td>
+        </tr>
+        <tr>
+          <td><b>Let's Encrypt</b></td>
+          <td><span class="tag t-ext">External</span></td>
+          <td class="mono">ACME HTTP-01</td>
+          <td>証明書の発行と自動更新。次回期限 2026-11-07。</td>
+        </tr>
+        <tr>
+          <td><b>Google Flights</b></td>
+          <td><span class="tag t-ext">External</span></td>
+          <td class="mono">fast_flights</td>
+          <td>価格の取得元。非公式スクレイパのため
+            <code>PriceProvider</code> 抽象の裏に隔離してある。</td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+</section>
+
+<section>
+  <h2>採用しなかった AWS サービス</h2>
+  <p class="sub">
+    構成図に「無いもの」にも判断がある。いずれも検討したうえで見送った。
+  </p>
+
+  <div class="table-wrap">
+    <table>
+      <thead>
+        <tr><th>サービス</th><th>見送った理由</th><th>影響</th></tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td><b>Amazon Route 53</b></td>
+          <td>ドメインを既に保有しており、権威 DNS も Google 側で動いている。
+            A レコードを1本足すだけで足りる。</td>
+          <td class="num">−$0.50 / 月</td>
+        </tr>
+        <tr>
+          <td><b>Systems Manager<br>Parameter Store</b></td>
+          <td><b>Lightsail はサービスロール（EC2 のインスタンスプロファイル相当）に対応していない。</b>
+            SSM から読むには IAM ユーザの長期キーをインスタンスに常設することになり、
+            ランダム文字列1つのためにそれをやるほうが危うい。
+            <code>setup.sh</code> がインスタンス上で生成し <span class="mono">root:fpp 0640</span> で持たせる。<br><br>
+            <b>KPI の S3 出力では逆の判断をした。</b>同じ制約に当たるが、こちらは
+            長期キーを置く以外に手段がなく、権限を <code>s3:PutObject</code> の
+            <code>kpi/*</code> 1プレフィックスまで絞れる。漏れても「そこに書ける」だけで、
+            バージョニングがあるので上書きも復元できる。</td>
+          <td class="num">$0</td>
+        </tr>
+        <tr>
+          <td><b>Application Load Balancer</b></td>
+          <td>SQLite 単一インスタンスの設計上、分散できない。
+            ALB 単体で月額がインスタンス代の2倍以上になる。</td>
+          <td class="num">−$16 / 月</td>
+        </tr>
+        <tr>
+          <td><b>AWS Lambda +<br>API Gateway</b></td>
+          <td>日次収集が上限500ルートで<b>約90分</b>かかりうる。Lambda の15分上限を超え、
+            Step Functions での分割が必要になる。SQLite も置き換えが要る。</td>
+          <td>実装数日</td>
+        </tr>
+        <tr>
+          <td><b>Amazon RDS</b></td>
+          <td>現在の規模（年 300 MB 程度）では過剰。
+            SQL は <code>repository.py</code> に閉じ込めてあり、必要になれば移行できる。</td>
+          <td class="num">−$15 / 月〜</td>
+        </tr>
+        <tr>
+          <td><b>Amazon CloudFront</b></td>
+          <td>静的ファイルは Chart.js 206 KB と自前の JS/CSS のみ。
+            Lightsail のプランに 2 TB の転送量が含まれる。</td>
+          <td class="num">$0</td>
+        </tr>
+        <tr>
+          <td><b>Amazon SES</b></td>
+          <td>メール通知は未実装。スキーマに <code>notify_email</code> 列だけ用意してある。
+            サンドボックス解除の申請が要るため、必要になってから。</td>
+          <td>スコープ外</td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+</section>
+
+<section>
+  <h2>月額費用</h2>
+  <p class="sub">us-west-2。Lightsail は固定料金で、インスタンス・SSD・静的 IP・転送量が含まれる。</p>
+
+  <div class="table-wrap">
+    <table>
+      <thead>
+        <tr><th>項目</th><th>内訳</th><th style="text-align:right">月額</th></tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td>Lightsail インスタンス</td>
+          <td class="mono">micro_3_0 · 2 TB 転送込み<br><b>無料トライアル中</b></td>
+          <td class="num">$7.00<br><span class="mono">(現在 $0.00)</span></td>
+        </tr>
+        <tr>
+          <td>自動スナップショット</td>
+          <td class="mono">実使用量ベース（概算）</td>
+          <td class="num">$0.20</td>
+        </tr>
+        <tr>
+          <td>静的 IP</td>
+          <td class="mono">アタッチ中は無料</td>
+          <td class="num">$0.00</td>
+        </tr>
+        <tr>
+          <td>データ転送</td>
+          <td class="mono">プランに含まれる</td>
+          <td class="num">$0.00</td>
+        </tr>
+        <tr>
+          <td>Amazon S3（KPI）</td>
+          <td class="mono">月 30 PUT · 数十 KB</td>
+          <td class="num">&lt; $0.01</td>
+        </tr>
+      </tbody>
+      <tfoot>
+        <tr><td colspan="2">合計</td><td class="num">$7.20</td></tr>
+      </tfoot>
+    </table>
+  </div>
+
+  <div class="note">
+    <b>Lightsail は無料トライアル中で、2026-06〜08 の課金は実測 $0.00。</b>
+    上表の $7.00 はトライアル終了後の額で、2026-11 頃から発生する。
+    費用の逸脱は AWS Budgets で通知する — アカウント全体 $10 / 月と、
+    Lightsail のみに絞った $12 / 月 の2本。どちらも実績 85%・実績 100%・
+    予測 100% の3段階で、2つまでは無料。
+    <b>プロジェクト用の予算を Lightsail だけに絞っている</b>のは、S3（KPI）が
+    月 $0.01 未満で誤差にしかならない一方、S3 で絞ると同一アカウントの無関係な
+    バケットが月 $2.5 ほど混ざり、本プロジェクトの異常がその変動に埋もれるため。
+  </div>
+
+  <div class="note">
+    先行プロジェクトの Lightsail インスタンス <span class="mono">flighttrend</span>（$5.00 / 月）は
+    <b>2026-08-09 に削除済み</b>。DB を退避したうえで消した — 実測価格の行は 0 件で、
+    12,400 行はすべてシミュレーション値だったため失うものは無かった。
+    <b>Lightsail は「停止」では課金が止まらない</b> — 削除が必要で、
+    アタッチされていない静的 IP も課金対象になる。静的 IP も併せて解放した。
+  </div>
+</section>
+
+<footer>
+  図中のアイコンは AWS Architecture Icons の視覚言語（カテゴリ配色・グループ境界の描き分け）に沿って作図した
+  代替表現で、AWS 公式のアイコン素材そのものではない。
+  構成値は 2026-08-10 時点の稼働中リソースから取得した実測値。
+</footer>
+
+</div>

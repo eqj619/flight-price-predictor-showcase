@@ -1,0 +1,54 @@
+# Flight Price Predictor — Caddy 設定
+#
+# setup.sh が __DOMAIN__ を実際のドメインに置換して
+# /etc/caddy/Caddyfile に配置する。
+#
+# TLS 証明書は Let's Encrypt から自動取得・自動更新される。
+# ドメインの A レコードがこのインスタンスを指していて、80/443 が
+# 開いていることが前提。
+
+__DOMAIN__ {
+	encode zstd gzip
+
+	header {
+		# トークンが URL に載る設計なので、平文で来させない。
+		Strict-Transport-Security "max-age=31536000; includeSubDomains"
+		X-Content-Type-Options "nosniff"
+		# 共有 URL が外部サイトへの Referer に載らないようにする
+		# （アプリ側でも同じヘッダを返しているが、二重に掛ける）。
+		Referrer-Policy "no-referrer"
+		-Server
+	}
+
+	reverse_proxy 127.0.0.1:8000 {
+		# ★ここが要。
+		#
+		# Caddy の既定は「クライアントが送ってきた X-Forwarded-For に
+		# 追記する」なので、クライアントが偽の IP を先頭に入れておくと
+		# そのまま残る。アプリはレート制限（IP あたり10件/日）にこの値を
+		# 使うので、上書きしないと上限を素通りできる。
+		#
+		# {remote_host} は TCP の接続元。クライアントが細工できない。
+		header_up X-Forwarded-For {remote_host}
+		header_up X-Real-IP {remote_host}
+	}
+
+	# アクセスログにトークンを残さない。
+	#
+	# アプリ側のログには伏字フィルタが入っている（app/security.py）が、
+	# Caddy はそれを通らない。/w/{token} と /api/watches/{token} が
+	# そのまま記録されると、URL を知っている＝閲覧・削除できるという
+	# 設計上、ログの閲覧者に権限を渡すのと同じになる。
+	#
+	# Caddy にはパスを書き換えるフィルタが無いので、これらのパスは
+	# ログ自体を落とす。残りのリクエストは通常どおり記録する。
+	@tokenized path /w/* /l/* /api/watches/* /api/collections*
+	log_skip @tokenized
+
+	log {
+		output file /var/log/caddy/access.log {
+			roll_size 10MiB
+			roll_keep 5
+		}
+	}
+}
